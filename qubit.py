@@ -17,8 +17,10 @@ class Qubit:
     def measurement(self):
         zero_probability = self.state_vector[0][0]**2 + self.state_vector[0][1]**2
         one_probability = self.state_vector[1][0]**2 + self.state_vector[1][1]**2
-        outcome = random()
-        if outcome <= zero_probability: #not perfect
+        outcome = 0
+        while outcome == 0 or outcome == 1:
+            outcome = random()
+        if outcome <= zero_probability:
             self.state_vector = np.array([[1.0, 0.0],[0.0, 0.0]])
         else:
             self.state_vector = np.array([[0.0, 0.0],[1.0, 0.0]])
