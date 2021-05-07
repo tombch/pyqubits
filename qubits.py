@@ -17,10 +17,23 @@ class Qubits:
             for i in range(self.num_states):
                 (self.state_vector[i][0][0], self.state_vector[i][0][1]) = (random(), random())
             self.state_vector = self.state_vector/la.normaliser(self.state_vector)
-    
-    def print_state(self):      
-        state_string = " = (" + la.show(self.state_vector[0][0]) + ") |" + bin(0)[2:].zfill(self.num_qubits) + ">"
-        for i in range(1, self.num_states):
-            state_string += "\n + (" + la.show(self.state_vector[i][0]) + ") |" + bin(i)[2:].zfill(self.num_qubits) + ">"
-        print(state_string + "\n")
-        
+
+    def show_amplitude(self, z):
+        if (z[0] == 0) and (z[1] == 0):
+            return str(z[0])         
+        elif (z[0] == 0):
+            return str(z[1]) + " i" 
+        elif (z[1] == 0):
+            return str(z[0])    
+        else:
+            return str(z[0]) + " + " + str(z[1]) + " i"
+
+    def print_state(self):     
+        state_string = " = "
+        for i in range(0, self.num_states):
+            if self.show_amplitude(self.state_vector[i][0]) != "0.0":   
+                state_string += "(" + self.show_amplitude(self.state_vector[i][0]) + ") |" + bin(i)[2:].zfill(self.num_qubits) + ">\n"
+        newline_count = state_string.count("\n")
+        state_string = state_string.replace("\n", "\n + ", newline_count-1)
+        state_string = state_string.replace("(1.0) ", "")
+        print(state_string)

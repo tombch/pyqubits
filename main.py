@@ -1,6 +1,7 @@
 from qubits import Qubits
 import gates
 import numpy as np
+import linear_algebra as la
 import time
 
 #quantum-computing-sim
