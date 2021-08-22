@@ -1,7 +1,6 @@
 from quantum_state import QuantumState
 import gates
 import numpy as np
-import linear_algebra as la
 import time
 
 def main():
