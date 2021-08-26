@@ -2,6 +2,7 @@ import time
 import numpy as np
 import qvert as qvt
 
+#Example quantum algorithms
 def entanglement():
     s = qvt.QuantumState(num_qubits=2, preset_state="zero_state", state_name="s")
     s.print_state()
@@ -11,7 +12,7 @@ def entanglement():
     s.print_state()
     s.measurement(qubit=1)
     s.print_state()
-
+    s.print_circuit()
 
 def quantum_teleportation():
     v = qvt.QuantumState(state_name="v")    
@@ -33,7 +34,7 @@ def quantum_teleportation():
     if m_1 == 1:
         qvt.Z(vxb1xb2, qubit=3)
     vxb1xb2.print_state()
-
+    vxb1xb2.print_circuit()
 
 def deutsch_algorithm():
     q1 = qvt.QuantumState(preset_state="zero_state", state_name="q1")
@@ -42,33 +43,28 @@ def deutsch_algorithm():
     q1xq2.print_state()
     qvt.H(q1xq2, qubit=1)
     qvt.H(q1xq2, qubit=2)
-    qvt.U_f(q1xq2, f_choice=1)
+    qvt.Uf2(q1xq2, f_choice=1)
     qvt.H(q1xq2, qubit=1)
     f0_xor_f1 = q1xq2.measurement(qubit=1)
-    q1xq2.print_state()
     if f0_xor_f1 == 0:
         print("f is constant")
     elif f0_xor_f1 == 1:
         print("f is balanced")
-
+    q1xq2.print_state()
+    q1xq2.print_circuit()
 
 def main():
     start = time.time()
-    print("==ENTANGLEMENT==")
-    entanglement()
-    print("==QUANTUM TELEPORTATION==")
-    quantum_teleportation()
-    print("==DEUTSCH'S ALGORITHM==")
-    deutsch_algorithm()
+    # test
+    q = qvt.QuantumState(preset_state="zero_state", state_name="q")
+    q.measurement()
+    q.print_state()
+    q.print_circuit()
+    qvt.H(q)
+    q.print_state()
+    q.print_circuit()
     end = time.time()
     print("Time taken: " + str(end - start) + " seconds")
-    print("1\t2")
-    print("q\tr")
-    print("|\t|")
-    print("H\t|")
-    print("|\t|")
-    print("O-------+")
-    print("|\t|")
 
 if __name__ == '__main__':
     main()
