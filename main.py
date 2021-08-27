@@ -46,21 +46,25 @@ def deutsch_algorithm():
     qvt.Uf2(q1xq2, f_choice=1)
     qvt.H(q1xq2, qubit=1)
     f0_xor_f1 = q1xq2.measurement(qubit=1)
+    q1xq2.print_state()
+    q1xq2.print_circuit()
     if f0_xor_f1 == 0:
         print("f is constant")
     elif f0_xor_f1 == 1:
         print("f is balanced")
-    q1xq2.print_state()
-    q1xq2.print_circuit()
 
 def main():
     start = time.time()
-    # test
-    q = qvt.QuantumState(preset_state="zero_state", state_name="q")
-    q.measurement()
+    q = qvt.QuantumState(num_qubits=4, preset_state="zero_state", state_name="q")
     q.print_state()
-    q.print_circuit()
-    qvt.H(q)
+    qvt.H(q, qubit=1)
+    qvt.CNOT(q, control=1, target=2)
+    q.print_state()
+    qvt.H(q, qubit=4)
+    qvt.CNOT(q, control=4, target=2)
+    q.print_state()
+    q.measurement(qubit=4)
+    q.measurement(qubit=1)
     q.print_state()
     q.print_circuit()
     end = time.time()
