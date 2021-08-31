@@ -77,8 +77,8 @@ class QuantumState:
             else:
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, I_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, I_matrix)
-        collapsed_zero = np.matmul(measurement_matrix_zero, self.state_vector)
-        collapsed_one = np.matmul(measurement_matrix_one, self.state_vector)
+        collapsed_zero = measurement_matrix_zero @ self.state_vector
+        collapsed_one = measurement_matrix_one @ self.state_vector
         zero_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_zero.conjugate().transpose() @ collapsed_zero
         one_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_one.conjugate().transpose() @ collapsed_one
         # Dividing each probability by their sum gets the sum of both resulting probabilities (closer) to 1    
