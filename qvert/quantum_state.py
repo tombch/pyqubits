@@ -2,6 +2,14 @@ import numpy as np
 import random
 from qvert.gates import *
 
+class StateVector:
+    def __init__(self):
+        pass
+
+class Circuit:
+    def __init__(self):
+        pass
+
 # Class for creating, displaying and measuring quantum states
 class QuantumState:
     # Creates a new QuantumState object
