@@ -1,5 +1,5 @@
 # qvert
 ## Intro
-A python module for quantum computing simulations.
+A python program for quantum computing simulations.
 ## Required libraries
-* NumPy
+* To be updated.
