@@ -1,15 +1,35 @@
 import numpy as np
 import random
 
+gates_dict = {}
+
 zero_matrix = np.array([[1+0j, 0+0j], [0+0j, 0+0j]])
+gates_dict['zero_matrix'] = zero_matrix 
+
 one_matrix = np.array([[0+0j, 0+0j], [0+0j, 1+0j]])
+gates_dict['one_matrix'] = one_matrix 
+
 I_matrix = np.array([[1+0j, 0+0j], [0+0j, 1+0j]])
+gates_dict['I'] = I_matrix 
+
 X_matrix = np.array([[0+0j, 1+0j], [1+0j, 0+0j]])
+gates_dict['X'] = X_matrix 
+
 Y_matrix = np.array([[0+0j, 0-1j], [0+1j, 0+0j]])
+gates_dict['Y'] = Y_matrix
+
 Z_matrix = np.array([[1+0j, 0+0j], [0+0j, -1+0j]])
+gates_dict['Z'] = Z_matrix
+
 H_matrix = np.array([[1+0j, 1+0j], [1+0j, -1+0j]])/np.sqrt(2)
+gates_dict['H'] = H_matrix 
+
 P_matrix = np.array([[1+0j, 0+0j], [0+0j, 0+1j]])
+gates_dict['P'] = P_matrix
+
 T_matrix = np.array([[1+0j, 0+0j], [0+0j, (np.sqrt(2)/2)+(np.sqrt(2)/2)*1j]])
+gates_dict['T'] = T_matrix 
+
 U_f_matrix_1 = np.array([[1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 1+0j, 0+0j, 0+0j], [0+0j, 0+0j, 1+0j, 0+0j], [0+0j, 0+0j, 0+0j, 1+0j]]) 
 U_f_matrix_2 = np.array([[0+0j, 1+0j, 0+0j, 0+0j], [1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 0+0j, 0+0j, 1+0j], [0+0j, 0+0j, 1+0j, 0+0j]])         
 U_f_matrix_3 = np.array([[1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 1+0j, 0+0j, 0+0j], [0+0j, 0+0j, 0+0j, 1+0j], [0+0j, 0+0j, 1+0j, 0+0j]])  

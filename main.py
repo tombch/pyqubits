@@ -1,70 +1,108 @@
 import time
 import numpy as np
-import qvert as qvt
-
-# Example quantum algorithms
-def entanglement():
-    print("===ENTANGLEMENT===")
-    s = qvt.QuantumState(num_qubits=2, preset_state="zero_state", state_name="s")
-    s.print_state()
-    qvt.H(s, qubit=1)
-    s.print_state()
-    qvt.CNOT(s, control=1, target=2)
-    s.print_state()
-    s.measurement(qubit=1)
-    s.print_state()
-    s.print_circuit()
-
-def quantum_teleportation():
-    print("===QUANTUM TELEPORTATION===")
-    v = qvt.QuantumState(state_name="v")    
-    b1 = qvt.QuantumState(preset_state="zero_state", state_name="b1")
-    b2 = qvt.QuantumState(preset_state="zero_state", state_name="b2")  
-    v.print_state()
-    b1.print_state()
-    b2.print_state()
-    vxb1xb2 = v * b1 * b2
-    vxb1xb2.print_state()
-    qvt.H(vxb1xb2, qubit=2)
-    qvt.CNOT(vxb1xb2, control=2, target=3)
-    vxb1xb2.print_state()
-    qvt.CNOT(vxb1xb2, control=1, target=2)
-    qvt.H(vxb1xb2, qubit=1)
-    m_1 = vxb1xb2.measurement(qubit=1)
-    m_2 = vxb1xb2.measurement(qubit=2)
-    if m_2 == 1:
-        qvt.X(vxb1xb2, qubit=3)
-    if m_1 == 1:
-        qvt.Z(vxb1xb2, qubit=3)
-    vxb1xb2.print_state()
-    vxb1xb2.print_circuit()
-
-def deutsch_algorithm():
-    print("===DEUTSCH'S ALGORITHM===")
-    q1 = qvt.QuantumState(preset_state="zero_state", state_name="q1")
-    q2 = qvt.QuantumState(preset_state="one_state", state_name="q2")
-    q1xq2 = q1 * q2
-    q1xq2.print_state()
-    qvt.H(q1xq2, qubit=1)
-    qvt.H(q1xq2, qubit=2)
-    qvt.Uf2(q1xq2, f_choice=1)
-    qvt.H(q1xq2, qubit=1)
-    q1xq2.print_state()
-    f0_xor_f1 = q1xq2.measurement(qubit=1)
-    q1xq2.print_state()
-    q1xq2.print_circuit()
-    if f0_xor_f1 == 0:
-        print("f is constant")
-    elif f0_xor_f1 == 1:
-        print("f is balanced")
+import argparse
+import functools
+import json
+import gates
+from quantum_state import QuantumState
 
 def main():
-    start = time.time()
-    entanglement()
-    quantum_teleportation()
-    deutsch_algorithm()
-    end = time.time()
-    print("Time taken: " + str(end - start) + " seconds")
+    # start = time.time()
+    # end = time.time()
+    # print("Time taken: " + str(end - start) + " seconds")
+    print("Welcome to the quantum computing simulator.")
+    parser = argparse.ArgumentParser(conflict_handler='resolve')
+    parser.add_argument('-n', '--new', nargs='+', action='append')
+    parser.add_argument('-n-0', '--new-zero', nargs='+', action='append')
+    parser.add_argument('-n-1', '--new-one', nargs='+', action='append')
+    parser.add_argument('-j', '--join', nargs='+', action='append')
+    parser.add_argument('-s', '--state', nargs='+', action='append')
+    parser.add_argument('-c', '--circuit', nargs='+', action='append')
+    parser.add_argument('-h', '--histogram', nargs='+', action='append')
+    parser.add_argument('-a', '--apply', nargs=3, metavar=('gate', 'state', 'qubits'))
+    parser.add_argument('-m', '--measure', nargs=2, metavar=('state', 'qubit'))
+    parser.add_argument('-l', '--list', action='store_true')
+    parser.add_argument('-q', '--quit', action='store_true')
+
+    states_dict = {}
+    while True:
+        input_list = input('#~: ').split()
+        # print(input_list)
+        commands = []
+        i = 0
+        while i < len(input_list):
+            if '[' in input_list[i]:
+                new_list_string = input_list[i]
+                for  j in range(i+1, len(input_list)):
+                    new_list_string += input_list[j]
+                    if ']' in input_list[j]:
+                        i = j+1
+                        break
+                commands.append(new_list_string)
+            else:
+                commands.append(input_list[i])
+            i += 1
+        # print(commands)
+        args = parser.parse_args(commands)
+
+        if args.new:
+            args.new = [x for x_list in args.new for x in x_list]
+            for x in args.new:
+                states_dict[x] = QuantumState(state_name=x)
+
+        if args.new_zero:
+            args.new_zero = [x for x_list in args.new_zero for x in x_list]
+            for x in args.new_zero:
+                states_dict[x] = QuantumState(state_name=x, preset_state="zero_state")
+    
+        if args.new_one:
+            args.new_one = [x for x_list in args.new_one for x in x_list]
+            for x in args.new_one:
+                states_dict[x] = QuantumState(state_name=x, preset_state="one_state")
+
+        if args.join:                    
+            for state_names in args.join:
+                states_list = []
+                for x in state_names:
+                    states_list.append(states_dict.get(x))
+                    states_dict.pop(x) 
+                joint_state = functools.reduce(QuantumState.__mul__, states_list)
+                states_dict[joint_state.state_name] = joint_state
+
+        if args.state:
+            args.state = [x for x_list in args.state for x in x_list]
+            for x in args.state:
+                states_dict.get(x).print_state()
+
+        if args.circuit:
+            args.circuit = [x for x_list in args.circuit for x in x_list]
+            for x in args.circuit:
+                states_dict.get(x).print_circuit()
+        
+        if args.apply:
+            # Barely functional
+            g = gates.gates_dict.get(args.apply[0])
+            s = states_dict.get(args.apply[1])
+            if not ('[' in args.apply[2] or ']' in args.apply[2] or ',' in args.apply[2]): 
+                qubit = int(args.apply[2])
+                gates.apply_gate(s, qubit, g, args.apply[0])
+                states_dict.update({args.apply[1] : s})
+            else:
+                qubits = json.loads(args.apply[2])
+                if len(qubits) == 1:
+                    qubit = int(qubits[0])
+                    gates.apply_gate(s, qubit, g, args.apply[0])
+                    states_dict.update({args.apply[1] : s})     
+                elif len(qubits) == 2:
+                    qubits = [int(x) for x in qubits]
+                    gates.apply_cgate(s, qubits[0], qubits[1], g, args.apply[0])
+                    states_dict.update({args.apply[1] : s}) 
+
+        if args.list:
+            print(list(states_dict.keys()))
+
+        if args.quit:
+            quit()
 
 if __name__ == '__main__':
     main()

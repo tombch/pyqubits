@@ -1,14 +1,6 @@
 import numpy as np
 import random
-from qvert.gates import *
-
-class StateVector:
-    def __init__(self):
-        pass
-
-class Circuit:
-    def __init__(self):
-        pass
+from gates import *
 
 # Class for creating, displaying and measuring quantum states
 class QuantumState:
@@ -48,28 +40,30 @@ class QuantumState:
     def __mul__(self, q):
         self.num_qubits += q.num_qubits
         self.num_classical_states = 2**self.num_qubits
-        self.state_name += f" x {q.state_name}"
+        self.state_name += f"x{q.state_name}"
         self.state_vector = np.kron(self.state_vector, q.state_vector)
         self.init_circuit()
         return self
 
+    def blank_circuit_lanes(self):
+        lanes = "\n "
+        for i in range(0, self.num_qubits):
+            lanes += f"|{' '*self.w}"
+        lanes += f"{' '*self.w}[{self.num_actions}]\n"
+        return lanes
+
     def init_circuit(self):
         self.num_actions = 0
         self.w = 3
-        self.circuit_string = ""
+        self.circuit_string = " "
         for i in range(0, self.num_qubits):
-            self.circuit_string += f"{(i+1)%10}{' '*self.w}"
-        self.circuit_string += "\n"
-        for i in range(0, self.num_qubits):
-            self.circuit_string += f"|{' '*self.w}"
-        self.circuit_string += f"{' '*self.w}[{self.num_actions}]\n"
+            self.circuit_string += f"{(i+1)%10}{' '*self.w}"     
+        self.circuit_string += self.blank_circuit_lanes()
 
     def update_circuit(self, new_wire):
         self.num_actions += 1
-        self.circuit_string += f"{new_wire}\n"
-        for i in range(0, self.num_qubits):
-            self.circuit_string += f"|{' '*self.w}"
-        self.circuit_string += f"{' '*self.w}[{self.num_actions}]\n"
+        self.circuit_string += f" {new_wire}"
+        self.circuit_string += self.blank_circuit_lanes()
 
     def measurement(self, qubit=1):
         if (qubit == 1):
