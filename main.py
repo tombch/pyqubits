@@ -249,12 +249,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-# if args.new_zero:
-#     for new_states in args.new_zero:
-#         try: 
-#             num_qubits = int(new_states[len(new_states)-1])
-#         except ValueError:
-#             num_qubits = 1
-#         for x in new_states:
-#             states_dict[x] = QuantumState(num_qubits=num_qubits, state_name=x, preset_state='zero_state')    
+    main()  
