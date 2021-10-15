@@ -116,7 +116,7 @@ class QuantumState:
                 state_string += f"{current_amplitude_string} |{bin(i)[2:].zfill(self.num_qubits)}>\n"
         newline_count = state_string.count("\n")
         state_string = state_string.replace("\n", f"\n{' ' * len(self.state_name)} + ", newline_count-1)
-        print(f"[{self.num_actions}] State vector for {self.state_name}:\n{state_string}")
+        print(f"State vector for {self.state_name} [{self.num_actions}]:\n{state_string[:len(state_string)-1]}")
 
     def print_circuit(self):
-        print(f"Circuit diagram for {self.state_name}:\n{self.circuit_string}\n")
+        print(f"Circuit diagram for {self.state_name}:\n{self.circuit_string[:len(self.circuit_string)-1]}") # more dodgy
