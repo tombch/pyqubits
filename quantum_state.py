@@ -120,3 +120,8 @@ class QuantumState:
 
     def print_circuit(self):
         print(f"Circuit diagram for {self.state_name}:\n{self.circuit_string[:len(self.circuit_string)-1]}") # more dodgy
+
+    def print_probabilities(self):
+        print(f"Probabilities for {self.state_name} {[self.num_actions]}:")
+        for i in range(0, self.num_classical_states):
+            print(f" {bin(i)[2:].zfill(self.num_qubits)}\t{round(abs(self.state_vector[i])**2, 2)}\t{'=' * round(50 * abs(self.state_vector[i])**2)}")

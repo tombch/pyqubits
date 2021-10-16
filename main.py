@@ -37,6 +37,10 @@ WARNING: with each additional qubit in a state, the number of basis vectors (pri
 --circuit s1 s2 s3 ...
 Print the circuit diagrams for multiple quantum states.
 
+-p, --probs
+--probs s1 s2 s3 ...
+Print histograms displaying measurement probabilities for multiple quantum states.
+
 -a, --apply
 --apply g s {qubit OR [qubit] OR [control, target]}
 Apply quantum logic gate g to specified qubit(s) in the state s. 
@@ -88,11 +92,14 @@ def get_all_args(parser):
         while i < len(input_list):
             if '[' in input_list[i]:
                 new_list_string = input_list[i]
-                for  j in range(i+1, len(input_list)):
-                    new_list_string += input_list[j]
-                    if ']' in input_list[j]:
-                        i = j+1
-                        break
+                if ']' in input_list[i]:
+                    pass
+                else:
+                    for  j in range(i+1, len(input_list)):
+                        new_list_string += input_list[j]
+                        if ']' in input_list[j]:
+                            i = j+1
+                            break
                 commands.append(new_list_string)
             else:
                 commands.append(input_list[i])
@@ -111,8 +118,8 @@ def main():
     parser.add_argument('-j', '--join', nargs='+', action='append')
     parser.add_argument('-s', '--state', nargs='+', action='append')
     parser.add_argument('-c', '--circuit', nargs='+', action='append')
-#     parser.add_argument('-p', '--probabilities', nargs='+', action='append')
-    parser.add_argument('-a', '--apply', nargs=3)
+    parser.add_argument('-p', '--probs', nargs='+', action='append')
+    parser.add_argument('-a', '--apply', nargs='+')
     parser.add_argument('-m', '--measure', nargs=2)
     parser.add_argument('-r', '--rename', nargs=2)
     parser.add_argument('-t', '--timer', nargs=1)
@@ -181,29 +188,34 @@ def main():
                     args.circuit = [x for x_list in args.circuit for x in x_list]
                     for x in args.circuit:
                         states_dict.get(x).print_circuit()
-                
+
+                if args.probs:
+                    args.probs = [x for x_list in args.probs for x in x_list]
+                    for x in args.probs:
+                        states_dict.get(x).print_probabilities()
+
                 if args.apply:
                     gate_name = args.apply[0]
                     s = states_dict.get(args.apply[1])
-                    qubit_names = json.loads(args.apply[2])
+                    qubit_args = args.apply[2:]
+                    qubit_names = [json.loads(qubit_args[i]) for i in range(0, len(qubit_args))]
 
                     if gate_name in gates.one_arg_gates:
                         gate_func = gates.one_arg_gates.get(gate_name)
+                        for qubit in qubit_names:
+                            if isinstance(qubit, list) and len(qubit) == 1:
+                                qubit = int(qubit[0])
+                                gate_func(s, qubit) 
 
-                        if isinstance(qubit_names, list) and len(qubit_names) == 1:
-                            qubit = int(qubit_names[0])
-                            gate_func(s, qubit) 
-
-                        elif isinstance(qubit_names, int):
-                            qubit = qubit_names
-                            gate_func(s, qubit) 
+                            elif isinstance(qubit, int):
+                                gate_func(s, qubit) 
 
                     elif gate_name in gates.two_args_gates:
                         gate_func = gates.two_args_gates.get(gate_name)
-                        
-                        if isinstance(qubit_names, list) and len(qubit_names) == 2:
-                            qubits = [int(x) for x in qubit_names]
-                            gate_func(s, qubits[0], qubits[1])
+                        for qubits in qubit_names:
+                            if isinstance(qubits, list) and len(qubits) == 2:
+                                qubits = [int(x) for x in qubits]
+                                gate_func(s, qubits[0], qubits[1])
                     else: 
                         print("Gate not found.")                
 
