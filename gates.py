@@ -69,6 +69,7 @@ def apply_cgate(s, control, target, chosen_matrix, gate_char):
                 new_wire += gate_char+gap*s.w
             else:
                 new_wire += "|"+gap*s.w
+        s.update_circuit(new_wire)
     elif target < control:
         for i in range(0, s.num_qubits):
             if (i+1) == control: 
@@ -79,7 +80,7 @@ def apply_cgate(s, control, target, chosen_matrix, gate_char):
                 new_wire += gate_char+gap*s.w
             else:
                 new_wire += "|"+gap*s.w
-    s.update_circuit(new_wire)
+        s.update_circuit(new_wire)
 
 def X(s, qubit=1):
     apply_gate(s, qubit, X_matrix, "X")
