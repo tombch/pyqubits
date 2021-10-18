@@ -14,46 +14,41 @@ class ThrowingArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         raise ArgumentParserError(message)
 
-def get_commands(parser):
-    # Take user input and separate commands by splitting on pipes
-    user_input = input('#~: ').split('|')
-    commands = []
-    for statement in user_input:
-        # Split the current statement by spaces (multiple adjacent spaces are considered one split)
-        split_statement = statement.split()
-        num_splits = len(split_statement)
-        command_args = []
-        i = 0
-        while i < num_splits:
-            # We might have encountered a list
-            if '[' in split_statement[i]:
-                # arr will store the squeezed list
-                arr = split_statement[i]
-                # If the list ends in the same piece of the split statement, we end here
-                if ']' in split_statement[i]:
-                    pass
-                # Otherwise, search the rest of the statment splits, concatenating until arr end 
-                else:
-                    for  j in range(i+1, num_splits):
-                        arr += split_statement[j]
-                        if ']' in split_statement[j]:
-                            i = j
-                            break               
-                try:
-                    # If the arr we have found is actually a list, append to command args
-                    if isinstance(json.loads(arr), list):
-                        command_args.append(arr)
-                except json.decoder.JSONDecodeError:
-                    # If not, declare invalid
-                    raise ArgumentParserError(f"incorrect list syntax or invalid type(s) in list: {arr}")
-            elif ']' in split_statement[i]:
-                raise ArgumentParserError(f"encountered ']' before '[': {split_statement[i]}")
+def get_command(parser, statement):
+    # Split the current statement by spaces (multiple adjacent spaces are considered one split)
+    split_statement = statement.split()
+    num_splits = len(split_statement)
+    command_args = []
+    i = 0
+    while i < num_splits:
+        # We might have encountered a list
+        if '[' in split_statement[i]:
+            # arr will store the squeezed list
+            arr = split_statement[i]
+            # If the list ends in the same piece of the split statement, we end here
+            if ']' in split_statement[i]:
+                pass
+            # Otherwise, search the rest of the statment splits, concatenating until arr end 
             else:
-                command_args.append(split_statement[i])
-            i += 1
-        command = parser.parse_args(command_args)
-        commands.append(command)
-    return commands
+                for  j in range(i+1, num_splits):
+                    arr += split_statement[j]
+                    if ']' in split_statement[j]:
+                        i = j
+                        break               
+            try:
+                # If the arr we have found is actually a list, append to command args
+                if isinstance(json.loads(arr), list):
+                    command_args.append(arr)
+            except json.decoder.JSONDecodeError:
+                # If not, declare invalid
+                raise ArgumentParserError(f"incorrect list syntax or invalid type(s) in list: {arr}")
+        elif ']' in split_statement[i]:
+            raise ArgumentParserError(f"encountered ']' before '[': {split_statement[i]}")
+        else:
+            command_args.append(split_statement[i])
+        i += 1
+    command = parser.parse_args(command_args)
+    return command
 
 def main():
     print("Welcome to my terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.")
@@ -78,10 +73,14 @@ def main():
     command_quit = False
     disp_time = False
     while not command_quit:
-        try: 
-            commands = get_commands(parser)
+        try:
             start = time.time()
-            for command in commands:
+            # Take user input and separate statements by splitting on pipes
+            statements = input('#~: ').split('|')
+            successful_executes = 0
+            for statement in statements:
+                # Parse the current statement and return a command that can be acted on
+                command = get_command(parser, statement)
                 if command.new:
                     num_qubits_tag = 'num-qubits='
                     preset_state_tag = 'preset-state='
@@ -262,13 +261,15 @@ def main():
                 
                 if command.help:
                     print(help_message)
-
+                
+                successful_executes += 1
             end = time.time()
             if disp_time:
                 print("Time taken: " + str(end - start) + " seconds")
 
         except ArgumentParserError as e:
             print(f"ERROR: {e}")
+            print(f"commands successfully executed: {successful_executes}")
       
         # except AttributeError: 
         #     print("State not found.")

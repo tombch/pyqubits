@@ -68,7 +68,7 @@ The pipes are necessary for executing multiple commands on a single line.
 
 error_message = {
     "invalid new name" : "invalid new name",
-    "too many commands" : "more than one command (should be separated by pipes)",
+    "too many commands" : "argument cannot be used twice in one command (should be separated by pipes)",
     "state not found" : "state not found",
     "gate not found" : "gate not found",
     "invalid qubit ref" : "invalid reference of qubit(s)",
