@@ -14,6 +14,22 @@ def entanglement():
     s.print_state()
     s.print_circuit()
 
+# command line version of quantum teleportation: 
+# -t on | 
+# -n q | 
+# -n b ps=state0 nq=2 | 
+# -j q b name=qb | 
+# -s qb | 
+# -a H qb 2 | 
+# -a CNOT qb [2, 3] | 
+# -a CNOT qb [1, 2] | 
+# -a H qb 1 | 
+# -m qb 1 2 mv | 
+# -i-t {qb.2 == 1} {-a X qb 3} | 
+# -i-t {qb.1 == 1} {-a Z qb 3} | 
+# -c qb | 
+# -s qb
+# -t on | -n q | -n b ps=state0 nq=2 | -j q b name=qb | -s qb | -a H qb 2 | -a CNOT qb [2, 3] | -a CNOT qb [1,2] | -a H qb 1 | -m qb 1 2 mv | -i-t {qb.2 == 1} {-a X qb 3} | -i-t {qb.1 == 1} {-a Z qb 3} | -c qb | -s qb
 def quantum_teleportation():
     print("===QUANTUM TELEPORTATION===")
     v = quantum_state.QuantumState(state_name="v")    

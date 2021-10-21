@@ -138,7 +138,7 @@ def Uf2(s, f_choice=random.randint(1, 4)):
     s.update_circuit(new_wire)
 
 one_arg_gates = {}
-two_args_gates = {}
+two_arg_gates = {}
 
 one_arg_gates['X'] = X
 one_arg_gates['Y'] = Y
@@ -147,10 +147,10 @@ one_arg_gates['H'] = H
 one_arg_gates['P'] = P
 one_arg_gates['T'] = T
 
-two_args_gates['CNOT'] = CNOT
-two_args_gates['C_Y'] = C_Y
-two_args_gates['C_Z'] = C_Z
-two_args_gates['C_H'] = C_H
-two_args_gates['C_P'] = C_P
-two_args_gates['C_T'] = C_T
-two_args_gates['SWAP'] = swap
+two_arg_gates['CNOT'] = CNOT
+two_arg_gates['C_Y'] = C_Y
+two_arg_gates['C_Z'] = C_Z
+two_arg_gates['C_H'] = C_H
+two_arg_gates['C_P'] = C_P
+two_arg_gates['C_T'] = C_T
+two_arg_gates['SWAP'] = swap

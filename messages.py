@@ -1,24 +1,18 @@
 help_message = """---BEGIN HELP---
 COMMAND LIST:
 -n, --new
---new s1 s2 s3 ... num-qubits=N
+--new s1 s2 s3 ... num_qubits=N preset_state=PRESET_STATE
 Create multiple new random quantum states, each containing N qubits. 
-num-qubits is an optional parameter (default for this parameter is 1). 
-
--n-0, --new-zero
---new-zero s1 s2 s3 ... num-qubits=N
-Create multiple new quantum states, each of the form |0...0>, each containing N qubits.
-num-qubits is an optional parameter (default for this parameter is 1).
-
--n-1, --new-one
---new-one s1 s2 s3 ... num-qubits=N
-Create multiple new quantum states, each of the form |1...1>, each containing N qubits.
-num-qubits is an optional parameter (default for this parameter is 1).
+nq, num_qubits - an optional parameter (default for this parameter is 1).
+ps, preset_state - an optional parameter (not specifying this parameter means a random qubit state will be created).
+More on preset_state choices: 
+state0 - used to create multiple new quantum states of the form |0...0>, with number of qubits determined by num_qubits.
+state1 - used to create multiple new quantum states of the form |1...1>, with number of qubits determined by num_qubits.
 
 -j, --join
---join s1 s2 s3 ... name=new_name
+--join s1 s2 s3 ... name=NEW_NAME
 Join multiple pre-existing quantum states into one quantum state.
-new_name is an optional parameter (default for this parameter is s1xs2xs3x...). 
+name - an optional parameter (default for this parameter is s1xs2xs3x...). 
 
 -s, --state
 --state s1 s2 s3 ...
@@ -72,6 +66,6 @@ error_message = {
     "state not found" : "state not found",
     "gate not found" : "gate not found",
     "invalid qubit ref" : "invalid reference of qubit(s)",
-    "incorrect type for q" : "incorrect type for qubit ref",
-    "incorrect input for gate" : "incorrect input for gate"
+    "incorrect input for gate" : "incorrect input for gate",
+    "no qubit ref" : "no qubit reference(s) given"
 }
