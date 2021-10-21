@@ -376,7 +376,7 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
     return states_dict, vars_dict, disp_time, command_quit
 
 def main():
-    print("Welcome to my terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.")
+    print("Welcome to my terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.\n")
     parser = ThrowingArgumentParser(allow_abbrev=False, add_help=False)
     g = parser.add_mutually_exclusive_group()
     g.add_argument('-n', '--new', nargs='+', action='append')

@@ -1,6 +1,6 @@
 # qvert
 ## Intro
 A python program for quantum computing simulations.
-![example_command](./images/example_command.png)
+![](./images/example_command_2.png?raw=true)
 ## Required libraries
 * NumPy
