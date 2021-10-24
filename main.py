@@ -62,36 +62,28 @@ def regroup(split_statement, left_char, right_char, split_char=""):
     regrouped_expressions = []
     num_splits = len(split_statement)
     i = 0
-    open_expr = False
+    open_expr = 0
     current_statement = ""
     while i < num_splits:    
         c = 0
         len_current_split = len(split_statement[i])
         while c < len_current_split:
             # opening expression
-            if open_expr == False and left_char == split_statement[i][c]:
-                open_expr = True
+            if left_char == split_statement[i][c]:
+                open_expr += 1
 
             # closing expression
-            elif open_expr == True and right_char == split_statement[i][c]:
-                open_expr = False
-
-            # error
-            elif open_expr == True and left_char == split_statement[i][c]:
-                pass
-
-            # error
-            elif open_expr == False and right_char == split_statement[i][c]:
-                pass 
+            elif right_char == split_statement[i][c]:
+                open_expr -= 1
             c += 1
-        if not open_expr:
+        if open_expr == 0:
             regrouped_expressions.append(current_statement + split_statement[i])    
             current_statement = ""
         else:
             current_statement += split_statement[i] + split_char
         i += 1
     # error
-    if open_expr:
+    if open_expr != 0:
         pass
     return regrouped_expressions
 
@@ -335,7 +327,6 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             command_args = command.if_then[0]
             if_condition = command_args[0][1:len(command_args[0])-1]
             then_statements = command_args[1][1:len(command_args[1])-1]
-            
             execute_then_statements = False
             if_condition = if_condition.split('==')
             if_condition = [x.strip() for x in if_condition]

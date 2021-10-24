@@ -106,7 +106,6 @@ class QuantumState:
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, zero_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, one_matrix)
             else:
-                # measurement_matrix_zero = np.array([[measurement_matrix_zero[r][c], 0+0j, measurement_matrix_zero[r][c], 0+0j] for r in range(2**(i-1)) for c in range(2**(i-1))]).reshape(2**i, 2**i) 
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, I_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, I_matrix)
         collapsed_zero = measurement_matrix_zero @ self.state_vector
