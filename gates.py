@@ -17,6 +17,8 @@ U_f_matrix_4 = np.array([[1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 1+0j, 0+0j, 0+0j], [0+
 
 # Functions for manipulating quantum states
 def apply_gate(s, qubit, chosen_matrix, gate_char):
+    if not qubit:
+        qubit = 1
     if (qubit == 1):
         gate_matrix = chosen_matrix
     else:
@@ -36,93 +38,100 @@ def apply_gate(s, qubit, chosen_matrix, gate_char):
     s.update_circuit(new_wire)
 
 def apply_cgate(s, control, target, chosen_matrix, gate_char):
-    if (control == 1):
-        gate_matrix_a = zero_matrix
-        gate_matrix_b = one_matrix
-    elif (target == 1):
-        gate_matrix_a = I_matrix
-        gate_matrix_b = chosen_matrix
-    else:
-        gate_matrix_a = I_matrix
-        gate_matrix_b = I_matrix
-    for i in range(2, s.num_qubits+1):
-        if (i == control):
-            gate_matrix_a = np.kron(gate_matrix_a, zero_matrix)
-            gate_matrix_b = np.kron(gate_matrix_b, one_matrix)
-        elif (i == target):
-            gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
-            gate_matrix_b = np.kron(gate_matrix_b, chosen_matrix)         
+    if not control:
+        control = 1
+    if not target:
+        target = 2
+    if control != target:
+        if (control == 1):
+            gate_matrix_a = zero_matrix
+            gate_matrix_b = one_matrix
+        elif (target == 1):
+            gate_matrix_a = I_matrix
+            gate_matrix_b = chosen_matrix
         else:
-            gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
-            gate_matrix_b = np.kron(gate_matrix_b, I_matrix)
-    gate_matrix = np.add(gate_matrix_a, gate_matrix_b)
-    s.state_vector = gate_matrix @ s.state_vector
-    new_wire = ""
-    gap = " "
-    if control < target:
-        for i in range(0, s.num_qubits):
-            if (i+1) == control: 
-                gap = "-"
-                new_wire += "O"+gap*s.w
-            elif (i+1) == target:
-                gap = " "                    
-                new_wire += gate_char+gap*s.w
+            gate_matrix_a = I_matrix
+            gate_matrix_b = I_matrix
+        for i in range(2, s.num_qubits+1):
+            if (i == control):
+                gate_matrix_a = np.kron(gate_matrix_a, zero_matrix)
+                gate_matrix_b = np.kron(gate_matrix_b, one_matrix)
+            elif (i == target):
+                gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
+                gate_matrix_b = np.kron(gate_matrix_b, chosen_matrix)         
             else:
-                new_wire += "|"+gap*s.w
-        s.update_circuit(new_wire)
-    elif target < control:
-        for i in range(0, s.num_qubits):
-            if (i+1) == control: 
-                gap = " "
-                new_wire += "O"+gap*s.w
-            elif (i+1) == target:
-                gap = "-"                    
-                new_wire += gate_char+gap*s.w
-            else:
-                new_wire += "|"+gap*s.w
-        s.update_circuit(new_wire)
+                gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
+                gate_matrix_b = np.kron(gate_matrix_b, I_matrix)
+        gate_matrix = np.add(gate_matrix_a, gate_matrix_b)
+        s.state_vector = gate_matrix @ s.state_vector
+        new_wire = ""
+        gap = " "
+        if control < target:
+            for i in range(0, s.num_qubits):
+                if (i+1) == control: 
+                    gap = "-"
+                    new_wire += "O"+gap*s.w
+                elif (i+1) == target:
+                    gap = " "                    
+                    new_wire += gate_char+gap*s.w
+                else:
+                    new_wire += "|"+gap*s.w
+            s.update_circuit(new_wire)
+        elif target < control:
+            for i in range(0, s.num_qubits):
+                if (i+1) == control: 
+                    gap = " "
+                    new_wire += "O"+gap*s.w
+                elif (i+1) == target:
+                    gap = "-"                    
+                    new_wire += gate_char+gap*s.w
+                else:
+                    new_wire += "|"+gap*s.w
+            s.update_circuit(new_wire)
+    else:
+        print("error: control qubit and target qubit cannot be the same")
 
-def X(s, qubit=1):
+def X(s, qubit):
     apply_gate(s, qubit, X_matrix, "X")
 
-def Y(s, qubit=1):
+def Y(s, qubit):
     apply_gate(s, qubit, Y_matrix, "Y")
 
-def Z(s, qubit=1):
+def Z(s, qubit):
     apply_gate(s, qubit, Z_matrix, "Z")
 
-def H(s, qubit=1):
+def H(s, qubit):
     apply_gate(s, qubit, H_matrix, "H")
 
-def P(s, qubit=1):
+def P(s, qubit):
     apply_gate(s, qubit, P_matrix, "P")
 
-def T(s, qubit=1):
+def T(s, qubit):
     apply_gate(s, qubit, T_matrix, "T")
 
-def CNOT(s, control=1, target=2):
+def CNOT(s, control, target):
     apply_cgate(s, control, target, X_matrix, "X")
 
-def C_Y(s, control=1, target=2):
+def C_Y(s, control, target):
     apply_cgate(s, control, target, Y_matrix, "Y")
 
-def C_Z(s, control=1, target=2):
+def C_Z(s, control, target):
     apply_cgate(s, control, target, Z_matrix, "Z")
 
-def C_H(s, control=1, target=2):
+def C_H(s, control, target):
     apply_cgate(s, control, target, H_matrix, "H")
 
-def C_P(s, qubit=1):
+def C_P(s, qubit):
     apply_cgate(s, control, target, P_matrix, "P")
 
-def C_T(s, qubit=1):
+def C_T(s, qubit):
     apply_cgate(s, control, target, T_matrix, "T")
 
 def swap(s, qubit1, qubit2):
     if s.num_qubits > 1:
-        CNOT(s, control=qubit1, target=qubit2)
-        CNOT(s, control=qubit2, target=qubit1)
-        CNOT(s, control=qubit1, target=qubit2)
+        CNOT(s, qubit1, qubit2)
+        CNOT(s, qubit2, qubit1)
+        CNOT(s, qubit1, qubit2)
 
 def Uf2(s, f_choice=random.randint(1, 4)):
     if f_choice == 1:

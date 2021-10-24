@@ -4,6 +4,7 @@ import argparse
 import functools
 import json
 import gates
+import re
 from quantum_state import QuantumState
 from messages import help_message, error_message
 
@@ -13,46 +14,6 @@ class ArgumentParserError(Exception):
 class ThrowingArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         raise ArgumentParserError(message)
-
-# def regroup(split_statement, command_args, left_char, right_char, must_be_list=False, must_be_expr=False):
-#     i = 0
-#     num_splits = len(split_statement)
-#     if must_be_expr:
-#         separator = " "
-#     else:
-#         separator = ""
-#     while i < num_splits:
-#         # We might have encountered a list or expr
-#         if left_char in split_statement[i]:
-#             # arr will store the squeezed list/expr
-#             arr = split_statement[i]
-#             # If the list/expr ends in the same piece of the split statement, we end here
-#             if right_char in split_statement[i]:
-#                 pass
-#             # Otherwise, search the rest of the statment splits, concatenating until arr end 
-#             else:
-#                 for  j in range(i+1, num_splits):
-#                     arr += separator + split_statement[j]
-#                     if right_char in split_statement[j]:
-#                         i = j
-#                         break               
-#             if must_be_list:
-#                 try:
-#                     # If the arr we have found is actually a list, append to command args
-#                     if isinstance(json.loads(arr), list):
-#                         command_args.append(arr)
-#                 except json.decoder.JSONDecodeError:
-#                     # If not, declare invalid
-#                     raise ArgumentParserError(f"incorrect list syntax or invalid type(s) in list: {arr}")
-#             else:
-#                 command_args.append(arr)
-#         elif right_char in split_statement[i]:
-#             raise ArgumentParserError(f"encountered {right_char} before {left_char}: {split_statement[i]}")
-#         else:
-#             command_args.append(split_statement[i])
-#         i += 1
-#     print(command_args)
-#     return command_args
 
 def regroup(split_statement, left_char, right_char, split_char=""):
     '''
@@ -67,11 +28,10 @@ def regroup(split_statement, left_char, right_char, split_char=""):
     while i < num_splits:    
         c = 0
         len_current_split = len(split_statement[i])
-        while c < len_current_split:
+        while c < len_current_split:            
             # opening expression
             if left_char == split_statement[i][c]:
                 open_expr += 1
-
             # closing expression
             elif right_char == split_statement[i][c]:
                 open_expr -= 1
@@ -82,9 +42,10 @@ def regroup(split_statement, left_char, right_char, split_char=""):
         else:
             current_statement += split_statement[i] + split_char
         i += 1
-    # error
-    if open_expr != 0:
-        pass
+    if open_expr > 0:
+        raise ArgumentParserError(f"incorrect list syntax: missing '{right_char}'")    
+    elif open_expr < 0:
+        raise ArgumentParserError(f"incorrect list syntax: missing '{left_char}'")
     return regrouped_expressions
 
 def get_command(parser, statement):
@@ -107,7 +68,10 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             num_qubits = 1
             preset_state = None
             for s in command_args:
-                if s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
+                illegal_chars = re.search("[^0-9a-zA-Z]", s)
+                if illegal_chars:
+                    raise ArgumentParserError(f"invalid character(s) in state name: {s[illegal_chars.span()[0]]}")
+                elif s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
                     if s.startswith(num_qubits_tag[0]): 
                         num_qubits = int(s[len(num_qubits_tag[0]):])
                     else:
@@ -117,8 +81,6 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                         preset_state = str(s[len(preset_state_tag[0]):])
                     else:
                         preset_state = str(s[len(preset_state_tag[1]):])
-                elif '[' in s or ']' in s or '=' in s or '-' in s:
-                    raise ArgumentParserError(f"{error_message['invalid new name']}: {s}")
                 else:
                     new_states.append(s)
             for s in new_states:
@@ -179,7 +141,7 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     states_dict[x].print_probabilities()
 
     if command.apply:
-        def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name, qubit_dict):
+        def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
             if required_num_qubits == 1:
                 gate_func = gates.one_arg_gates.get(gate_name)
             elif required_num_qubits == 2:
@@ -214,15 +176,14 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                         final_qubits.append(curr_q)
                     else:
                         raise ArgumentParserError(f"qubit reference(s) out of bounds: {curr_q}")
-            qubit_dict_keys = [x for x in qubit_dict]
             for qs in final_qubits:
-                qs_dict = {}
+                qs_list = []
                 if isinstance(qs, int):
-                    qs_dict[qubit_dict_keys[0]] = qs
+                    qs_list.append(qs)
                 else: 
-                    for i in range(len(qs)):
-                        qs_dict[qubit_dict_keys[i]] = qs[i]
-                gate_func(s, **qs_dict)
+                    for q in qs:
+                        qs_list.append(q)
+                gate_func(s, *qs_list)
         if len(command.apply) != 1:
             raise ArgumentParserError(error_message['too many commands'])
         else:
@@ -237,11 +198,9 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             if not qubit_refs:
                 raise ArgumentParserError(f"{error_message['no qubit ref']}")
             if gate_name in gates.one_arg_gates:
-                qubit_dict = {'qubit' : None}
-                check_qubits_apply_gate(s, 1, qubit_refs, gate_name, qubit_dict)                       
+                check_qubits_apply_gate(s, 1, qubit_refs, gate_name)                       
             elif gate_name in gates.two_arg_gates:
-                qubit_dict = {'control' : None, 'target' : None}
-                check_qubits_apply_gate(s, 2, qubit_refs, gate_name, qubit_dict)
+                check_qubits_apply_gate(s, 2, qubit_refs, gate_name)
             else: 
                 raise ArgumentParserError(f"{error_message['gate not found']}: {gate_name}")             
 
@@ -260,7 +219,6 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     make_vars = True
                 else:
                     qubit_refs.append(a)
-
             if s not in states_dict:
                 raise ArgumentParserError(f"{error_message['state not found']}: {s}")
             else:
@@ -290,12 +248,14 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             s = command_args[0]
             new_s = command_args[1]
             if s not in states_dict:
-                raise ArgumentParserError(f"{error_message['state not found']}: {s}")                   
-            else: 
-                s = states_dict[s]
-            states_dict.pop(command_args[0])
-            s.state_name = command_args[1]
-            states_dict.update({command_args[1] : s})
+                raise ArgumentParserError(f"{error_message['state not found']}: {s}")                                   
+            illegal_chars = re.search("[^0-9a-zA-Z]", new_s)
+            if illegal_chars:
+                raise ArgumentParserError(f"invalid character(s) in state name: {new_s[illegal_chars.span()[0]]}")
+            s_object = states_dict[s]
+            s_object.state_name = new_s
+            states_dict.pop(s)
+            states_dict.update({new_s : s_object})
 
     if command.timer:
         if len(command.timer) != 1:
@@ -336,7 +296,6 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             else:
                 left_hs = if_condition[0]
                 right_hs = if_condition[1]
-                # vars_dict.get(left_hs) was a bad idea. 0 evaluates to false so if our bit is zero, that condition would fail...
                 if left_hs in vars_dict: 
                     left_hs = vars_dict[left_hs]
                 elif isinstance(json.loads(left_hs), int):
@@ -350,11 +309,9 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     right_hs = int(right_hs)
                 else:
                     # error 
-                    pass
-                
+                    pass         
                 if left_hs == right_hs:
                     execute_then_statements = True
-
             if execute_then_statements:
                 then_statements = then_statements.split('|')
                 then_statements = regroup(then_statements, "{", "}", split_char="|")
@@ -393,9 +350,9 @@ def main():
             # Take user input and separate statements by splitting on pipes
             statements = input('#~: ')
             start = time.time()
+            successful_executes = 0
             statements = statements.split('|')
             statements = regroup(statements, "{", "}", split_char="|")
-            successful_executes = 0
             for statement in statements:
                 # Parse the current statement and return a command that can be acted on
                 command = get_command(parser, statement)
