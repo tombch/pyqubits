@@ -5,4 +5,4 @@ A python program for quantum computing simulations.
 ![example](/example.PNG)
 
 ## Required libraries
-* NumPy
+See `requirements.txt`.

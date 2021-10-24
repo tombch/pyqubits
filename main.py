@@ -3,8 +3,8 @@ import numpy as np
 import argparse
 import functools
 import json
-import gates
 import re
+import gates
 from quantum_state import QuantumState
 from messages import help_message, error_message
 
