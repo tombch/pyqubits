@@ -4,16 +4,18 @@ from gates import *
 
 # Class for creating, displaying and measuring quantum states
 class QuantumState:
-    # Creates a new QuantumState object
+    __slots__ = 'num_qubits', 'num_classical_states', 'state_name', 'state_vector', 'num_actions', 'circuit'
+    # Decimal place rounding accuracy (rounding occurs before measurement and when printing states)
+    dp = 16
+    # Width between wires in quantum circuit when displayed
+    w = 3
+
     def __init__(self, num_qubits=1, preset_state=None, preset_state_vector=None, state_name=None):
-        # Decimal place rounding accuracy (rounding occurs before measurement and when printing states)
-        self.dp = 16
         # Set number of qubits and the corresponding number of classical states
         self.num_qubits = num_qubits
         self.num_classical_states = 2**self.num_qubits
         # Set the name of the state, if provided
-        self.state_name = ""
-        if state_name != None:
+        if state_name:
             self.state_name = state_name
         else:
             self.state_name = "(no name)"
@@ -33,37 +35,64 @@ class QuantumState:
             self.state_vector = (2*np.random.random(self.num_classical_states)-1) + (2*np.random.random(self.num_classical_states)-1) * 1j
             # The vector is normalised to have length 1
             self.state_vector = self.state_vector/np.linalg.norm(self.state_vector)
-        # Function which creates the initial circuit string for the state
-        self.init_circuit()
+        # Create the initial circuit string for the state
+        self.num_actions = 0
+        self.circuit = [""]
+        for i in range(0, self.num_qubits):
+            self.circuit[0] += f"{(i+1)%10}{' '*QuantumState.w}"     
+        self.circuit.append(self.blank_circuit_lanes())
 
-    # Merges the QuantumState object q into the current object
-    def __mul__(self, q):
+    # Merges QuantumState object q into the current object
+    def __mul__(self, q): 
+        # Merge circuits first because this requires using attributes from both objects
+        diff_in_length = len(self.circuit) - len(q.circuit)
+        # q.circuit is longer
+        if diff_in_length < 0:
+            joint_circuit_length = len(q.circuit)
+            for i in range(abs(diff_in_length)):
+                self.circuit.append(self.blank_circuit_lanes(include_actions=False))
+        # self.circuit is longer
+        elif diff_in_length > 0:
+            joint_circuit_length = len(self.circuit)
+            for i in range(abs(diff_in_length)):
+                q.circuit.append(q.blank_circuit_lanes(include_actions=False))
+        # the circuits are the same length, so we can take the length of either
+        else:
+            joint_circuit_length = len(self.circuit)
+        merged_circuit = [""]
+        for i in range(0, self.num_qubits + q.num_qubits):
+            merged_circuit[0] += f"{(i+1)%10}{' '*QuantumState.w}"
+        merged_circuit.append(self.blank_circuit_lanes(include_actions=False) + q.blank_circuit_lanes(action_value=0))
+        for i in range(2, joint_circuit_length, 2):
+            merged_circuit.append(self.circuit[i] + q.circuit[i])
+            merged_circuit.append(self.blank_circuit_lanes(include_actions=False) + q.blank_circuit_lanes(action_value=int(i/2)))
+        # Update all attributes to factor in q
         self.num_qubits += q.num_qubits
         self.num_classical_states = 2**self.num_qubits
         self.state_name += f"x{q.state_name}"
         self.state_vector = np.kron(self.state_vector, q.state_vector)
-        self.init_circuit()
+        self.num_actions = max(self.num_actions, q.num_actions)
+        self.circuit = merged_circuit 
+        # Delete reference to q
+        del q
         return self
 
-    def blank_circuit_lanes(self):
-        lanes = "\n "
-        for i in range(0, self.num_qubits):
-            lanes += f"|{' '*self.w}"
-        lanes += f"{' '*self.w}[{self.num_actions}]\n"
+    def blank_circuit_lanes(self, action_value=None, num_qubits=None, include_actions=True):
+        if action_value is None:
+            action_value = self.num_actions
+        if num_qubits is None:
+            num_qubits = self.num_qubits
+        lanes = ""
+        for i in range(0, num_qubits):
+            lanes += f"|{' '*QuantumState.w}"
+        if include_actions:
+            lanes += f"{' '*QuantumState.w}[{action_value}]"
         return lanes
-
-    def init_circuit(self):
-        self.num_actions = 0
-        self.w = 3
-        self.circuit_string = " "
-        for i in range(0, self.num_qubits):
-            self.circuit_string += f"{(i+1)%10}{' '*self.w}"     
-        self.circuit_string += self.blank_circuit_lanes()
 
     def update_circuit(self, new_wire):
         self.num_actions += 1
-        self.circuit_string += f" {new_wire}"
-        self.circuit_string += self.blank_circuit_lanes()
+        self.circuit.append(f"{new_wire}")
+        self.circuit.append(self.blank_circuit_lanes())
 
     def measurement(self, qubit=1):
         if (qubit == 1):
@@ -77,6 +106,7 @@ class QuantumState:
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, zero_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, one_matrix)
             else:
+                # measurement_matrix_zero = np.array([[measurement_matrix_zero[r][c], 0+0j, measurement_matrix_zero[r][c], 0+0j] for r in range(2**(i-1)) for c in range(2**(i-1))]).reshape(2**i, 2**i) 
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, I_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, I_matrix)
         collapsed_zero = measurement_matrix_zero @ self.state_vector
@@ -85,8 +115,8 @@ class QuantumState:
         one_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_one.conjugate().transpose() @ collapsed_one
         # Dividing each probability by their sum gets the sum of both resulting probabilities (closer) to 1    
         sum_of_probabilities = zero_probability + one_probability
-        zero_probability = round(zero_probability/sum_of_probabilities, self.dp)
-        one_probability = round(one_probability/sum_of_probabilities, self.dp)
+        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.dp)
+        one_probability = round(one_probability/sum_of_probabilities, QuantumState.dp)
         dice = random.random()
         if dice < zero_probability:
             self.state_vector = collapsed_zero
@@ -100,9 +130,9 @@ class QuantumState:
         for i in range(0, self.num_qubits):
             if (i+1) == qubit: 
                 gap = "="
-                new_wire += "M"+gap*self.w
+                new_wire += "M"+gap*QuantumState.w
             else:
-                new_wire += "|"+gap*self.w
+                new_wire += "|"+gap*QuantumState.w
         new_wire += str(bit)
         self.update_circuit(new_wire)
         return bit
@@ -110,7 +140,7 @@ class QuantumState:
     def print_state(self):
         state_string = f"{self.state_name} = "
         for i in range(0, self.num_classical_states):
-            current_amplitude = round(self.state_vector[i].real, self.dp) + round(self.state_vector[i].imag, self.dp) * 1j
+            current_amplitude = round(self.state_vector[i].real, QuantumState.dp) + round(self.state_vector[i].imag, QuantumState.dp) * 1j
             if current_amplitude != 0:
                 current_amplitude_string = str(current_amplitude)
                 state_string += f"{current_amplitude_string} |{bin(i)[2:].zfill(self.num_qubits)}>\n"
@@ -119,7 +149,9 @@ class QuantumState:
         print(f"State vector for {self.state_name} [{self.num_actions}]:\n{state_string[:len(state_string)-1]}")
 
     def print_circuit(self):
-        print(f"Circuit diagram for {self.state_name}:\n{self.circuit_string[:len(self.circuit_string)-1]}") # more dodgy
+        print(f"Circuit diagram for {self.state_name}:")
+        for x in self.circuit:
+            print(" " + x)
 
     def print_probabilities(self):
         print(f"Probabilities for {self.state_name} {[self.num_actions]}:")
