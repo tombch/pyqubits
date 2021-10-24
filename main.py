@@ -69,9 +69,7 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             preset_state = None
             for s in command_args:
                 illegal_chars = re.search("[^0-9a-zA-Z]", s)
-                if illegal_chars:
-                    raise ArgumentParserError(f"invalid character(s) in state name: {s[illegal_chars.span()[0]]}")
-                elif s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
+                if s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
                     if s.startswith(num_qubits_tag[0]): 
                         num_qubits = int(s[len(num_qubits_tag[0]):])
                     else:
@@ -81,6 +79,8 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                         preset_state = str(s[len(preset_state_tag[0]):])
                     else:
                         preset_state = str(s[len(preset_state_tag[1]):])
+                elif illegal_chars:
+                    raise ArgumentParserError(f"invalid character(s) in state name: {s[illegal_chars.span()[0]]}")
                 else:
                     new_states.append(s)
             for s in new_states:

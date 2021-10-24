@@ -2,12 +2,77 @@
 ## Introduction
 A python program for quantum computing simulations.
 
-### Example: Quantum Teleportation
+Example simulations within the program:
 
-![example](/images/example.PNG)
+### Create a Bell State
+```
+Welcome to my terminal-based quantum computing simulator.
+Enter --help or -h for more information. To quit the program, enter --quit or -q.
+
+#~: --new bellstate num_qubits=2 state=zero
+#~: --state bellstate
+State vector for bellstate [0]:
+bellstate = (1+0j) |00>
+#~: --apply H bellstate 1 | --apply CNOT bellstate [1, 2]
+#~: --circuit bellstate | --state bellstate
+Circuit diagram for bellstate:
+ 1   2
+ |   |      [0]
+ H   |
+ |   |      [1]
+ O---X
+ |   |      [2]
+State vector for bellstate [2]:
+bellstate = (0.7071067811865475+0j) |00>
+          + (0.7071067811865475+0j) |11>
+#~: --probs bellstate
+Probabilities for bellstate [2]:
+ 00     0.5     =========================
+ 01     0.0
+ 10     0.0
+ 11     0.5     =========================
+#~:
+```
+
+### Quantum Teleportation
+```
+Welcome to my terminal-based quantum computing simulator.
+Enter --help or -h for more information. To quit the program, enter --quit or -q.
+
+#~: --timer on | --new q | --new bellstate num_qubits=2 state=zero | --apply H bellstate 1 | --apply CNOT bellstate [1,2] | --state q bellstate | --join q bellstate name=qb | --apply CNOT qb [1,2] | --apply H qb 1 | --measure qb 1 2 make_vars | --if-then {qb.2 == 1} {--apply X qb 3} | --if-then {qb.1 == 1} {--apply Z qb 3} | --circuit qb | --state qb
+State vector for q [0]:
+q = (-0.4774612308992416+0.2899719001617376j) |0>
+  + (0.5693502316014901-0.6031478955282047j) |1>
+State vector for bellstate [2]:
+bellstate = (0.7071067811865475+0j) |00>
+          + (0.7071067811865475+0j) |11>
+Circuit diagram for qb:
+ 1   2   3
+ |   |   |      [0]
+ |   H   |
+ |   |   |      [1]
+ |   O---X
+ |   |   |      [2]
+ O---X   |
+ |   |   |      [3]
+ H   |   |
+ |   |   |      [4]
+ M===|===|===0
+ |   |   |      [5]
+ |   M===|===1
+ |   |   |      [6]
+ |   |   X
+ |   |   |      [7]
+State vector for qb [7]:
+qb = (-0.4774612308992416+0.2899719001617375j) |010>
+   + (0.56935023160149-0.6031478955282046j) |011>
+Time taken: 0.030252456665039062 seconds
+```
 
 ## Requirements
-See `requirements.txt`.
+For dependencies see `requirements.txt`.
+
+Once necessary requirements are installed, enter `python main.py` to run the program.
 
 ## Executing Commands
 This program has various commands that can be used to simulate quantum circuits. These commands can be entered either line-by-line:
