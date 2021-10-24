@@ -186,9 +186,9 @@ If `condition` is true, then execute the commands within the second `{ }`; other
 --if-then-else {condition1} {command1 | command2 | ... } {--if-then-else {condition2} {command3 | command4 | ... } {command5 | command6 | ... }}
 ```
 
-### `-f`, `--for`
+### `-f-e`, `--for-each`
 ```
---for i iterable {command1 | command2 | ... }
+--for-each i iterable {command1 | command2 | ... }
 ```
 Work in progress.
 
@@ -196,7 +196,7 @@ Work in progress.
 ```
 --execute filename
 ```
-Executes the commands within file `filename.clqc`, if it exists. The `.clqc` extension is therefore necessary on any files that are intended to be executed.
+Execute the commands within `filename.clqc`, if it exists. The `.clqc` extension is therefore necessary on any files that are to be executed.
 
 For example, the following is a sequence of commands within a file named `script.clqc`:
 ```
@@ -213,6 +213,14 @@ For example, the following is a sequence of commands within a file named `script
     --apply Z q 1;
 }
 {
+    --measure q 2 make_vars;
+    --if-then-else { q.2 == 0 }
+    {
+        --apply H q 3;
+    }
+    {
+        --apply H q 4;
+    };
     --apply Z q 2;
     --apply Y q 2;
     --apply X q 2;
@@ -238,11 +246,15 @@ Circuit diagram for q:
  |   |   |   |      [2]
  M===|===|===|===1
  |   |   |   |      [3]
- |   Z   |   |
+ |   M===|===|===1
  |   |   |   |      [4]
- |   Y   |   |
+ |   |   |   H
  |   |   |   |      [5]
- |   X   |   |
+ |   Z   |   |
  |   |   |   |      [6]
+ |   Y   |   |
+ |   |   |   |      [7]
+ |   X   |   |
+ |   |   |   |      [8]
 #~:
 ```

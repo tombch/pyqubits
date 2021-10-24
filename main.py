@@ -52,7 +52,7 @@ def get_command(parser, statement):
     # Split the current statement on empty space
     split_statement = statement.split()
     command_args = regroup(split_statement, "{", "}", split_char=" ")
-    command_args = regroup(command_args, "[", "]", split_char="")
+    command_args = regroup(command_args, "[", "]", split_char=" ")
     command = parser.parse_args(command_args)
     return command
 
@@ -372,6 +372,28 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     # Execute the command, and return states_dict, disp_time and command_quit
                     states_dict, vars_dict, disp_time, command_quit = execute_command(parser, else_command, states_dict, vars_dict, disp_time, command_quit)
 
+    if command.for_each:
+        if len(command.for_each) != 1:
+            raise ArgumentParserError(error_message['too many commands'])
+        else:
+            command_args = command.for_each[0]
+            i_arg = command_args[0]
+            iterable_arg = command_args[1]
+            for_statements = command_args[2][1:len(command_args[2])-1]
+            iterable = eval(iterable_arg)
+            for_statements = for_statements.split('|')
+            for_statements = regroup(for_statements, "{", "}", split_char="|")
+            for_commands = []
+            for for_statement in for_statements:
+                # Parse the current statement and return a command that can be acted on
+                for_commands.append(get_command(parser, for_statement))
+            for i in iterable:
+                for for_command in for_commands:
+                    # Execute the command, and return states_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, for_command, states_dict, vars_dict, disp_time, command_quit)
+
+
+
     if command.execute:
         if len(command.execute) != 1:
             raise ArgumentParserError(error_message['too many commands'])
@@ -415,7 +437,7 @@ def main():
     g.add_argument('-h', '--help', action='store_true')
     g.add_argument('-i-t', '--if-then', nargs=2, action='append')
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
-    g.add_argument('-f', '--for', nargs=3, action='append')
+    g.add_argument('-f-e', '--for-each', nargs=3, action='append')
     g.add_argument('-e', '--execute', nargs=1, action='append')
 
     states_dict = {}

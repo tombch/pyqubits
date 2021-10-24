@@ -11,6 +11,14 @@
     --apply Z q 1;
 }
 {
+    --measure q 2 make_vars;
+    --if-then-else { q.2 == 0}
+    {
+        --apply H q 3;
+    }
+    {
+        --apply H q 4;
+    };
     --apply Z q 2;
     --apply Y q 2;
     --apply X q 2;
