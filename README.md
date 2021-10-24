@@ -1,20 +1,24 @@
 # Command-line quantum computing simulator
-## Introduction
+## Introduction \& Requirements
 A python program for quantum computing simulations.
 
-Example simulations within the program:
+For dependencies see `requirements.txt`. Once necessary requirements are installed, enter `python main.py` to run the program.
+
+
+## Things you can do
 
 ### Create a Bell State
 ```
 Welcome to my terminal-based quantum computing simulator.
 Enter --help or -h for more information. To quit the program, enter --quit or -q.
 
-#~: --new bellstate num_qubits=2 state=zero
-#~: --state bellstate
-State vector for bellstate [0]:
-bellstate = (1+0j) |00>
-#~: --apply H bellstate 1 | --apply CNOT bellstate [1, 2]
-#~: --circuit bellstate | --state bellstate
+#~: --new q num_qubits=2 state=zero
+#~: --state q
+State vector for q [0]:
+q = (1+0j) |00>
+#~: --apply H q 1 | --apply CNOT q [1, 2]
+#~: --rename q bellstate
+#~: --circuit bellstate | --state bellstate | --probs bellstate
 Circuit diagram for bellstate:
  1   2
  |   |      [0]
@@ -25,7 +29,6 @@ Circuit diagram for bellstate:
 State vector for bellstate [2]:
 bellstate = (0.7071067811865475+0j) |00>
           + (0.7071067811865475+0j) |11>
-#~: --probs bellstate
 Probabilities for bellstate [2]:
  00     0.5     =========================
  01     0.0
@@ -69,13 +72,8 @@ qb = (-0.4774612308992416+0.2899719001617375j) |010>
 Time taken: 0.030252456665039062 seconds
 ```
 
-## Requirements
-For dependencies see `requirements.txt`.
-
-Once necessary requirements are installed, enter `python main.py` to run the program.
-
-## Executing Commands
-This program has various commands that can be used to simulate quantum circuits. These commands can be entered either line-by-line:
+## How to use
+This program has various commands that can be used to simulate quantum circuits. These commands can either be entered and executed line-by-line:
 ```
 #~: command_1
 #~: command_2
@@ -83,11 +81,11 @@ This program has various commands that can be used to simulate quantum circuits.
 ...
 ```
 
- or on a single line (where they are executed from left to right), via the use of pipes:
+ or on a single line, where upon pressing enter, they are executed from left to right (via the use of pipes):
 ```
 #~: command1 | command2 | command3 | ...
 ``` 
-The pipes are necessary for executing multiple commands on a single line.
+The pipes are necessary for executing multiple commands on a single line. For details on the available commands, see below.
 
 ## Command List
 ### `-n`, `--new`
