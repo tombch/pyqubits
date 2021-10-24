@@ -20,11 +20,11 @@ class QuantumState:
         else:
             self.state_name = "(no name)"
         # The initial state vector will be generated randomly if neither a string description or ndarray are provided     
-        if preset_state == "state0":
+        if preset_state == "zero":
             # The zero state is the state |00...00>
             self.state_vector = np.zeros(self.num_classical_states) + np.zeros(self.num_classical_states) * 1j
             self.state_vector[0] = 1
-        elif preset_state == "state1":
+        elif preset_state == "one":
             # The one state is the state |11...11>
             self.state_vector = np.zeros(self.num_classical_states) + np.zeros(self.num_classical_states) * 1j
             self.state_vector[self.num_classical_states-1] = 1

@@ -59,7 +59,7 @@ def get_command(parser, statement):
 def execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit):
     if command.new:
         num_qubits_tag = ['nq=', 'num_qubits=']
-        preset_state_tag = ['ps=', 'preset_state=']
+        preset_state_tag = ['s=', 'state=']
         if len(command.new) != 1:
             raise ArgumentParserError(error_message['too many commands'])
         else:
