@@ -320,7 +320,58 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     then_command = get_command(parser, then_statement)
                     # Execute the command, and return states_dict, disp_time and command_quit
                     states_dict, vars_dict, disp_time, command_quit = execute_command(parser, then_command, states_dict, vars_dict, disp_time, command_quit)
-    
+
+    if command.if_then_else:
+        if len(command.if_then_else) != 1:
+            raise ArgumentParserError(error_message['too many commands'])
+        else:
+            command_args = command.if_then_else[0]
+            if_condition = command_args[0][1:len(command_args[0])-1]
+            then_statements = command_args[1][1:len(command_args[1])-1]
+            else_statements = command_args[2][1:len(command_args[2])-1]
+            execute_then_statements = False
+            if_condition = if_condition.split('==')
+            if_condition = [x.strip() for x in if_condition]
+            if len(if_condition) != 2:
+                # error
+                pass
+            else:
+                left_hs = if_condition[0]
+                right_hs = if_condition[1]
+                if left_hs in vars_dict: 
+                    left_hs = vars_dict[left_hs]
+                elif isinstance(json.loads(left_hs), int):
+                    left_hs = int(left_hs)
+                else:
+                    # error 
+                    pass
+                if right_hs in vars_dict:
+                    right_hs = vars_dict[right_hs]
+                elif isinstance(json.loads(right_hs), int):
+                    right_hs = int(right_hs)
+                else:
+                    # error 
+                    pass         
+                if left_hs == right_hs:
+                    execute_then_statements = True
+            if execute_then_statements:
+                then_statements = then_statements.split('|')
+                then_statements = regroup(then_statements, "{", "}", split_char="|")
+                for then_statement in then_statements:
+                    # Parse the current statement and return a command that can be acted on
+                    then_command = get_command(parser, then_statement)
+                    # Execute the command, and return states_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, then_command, states_dict, vars_dict, disp_time, command_quit)
+            else:
+                else_statements = else_statements.split('|')
+                else_statements = regroup(else_statements, "{", "}", split_char="|")
+                for else_statement in else_statements:
+                    # Parse the current statement and return a command that can be acted on
+                    else_command = get_command(parser, else_statement)
+                    # Execute the command, and return states_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, else_command, states_dict, vars_dict, disp_time, command_quit)
+
+
     return states_dict, vars_dict, disp_time, command_quit
 
 def main():
@@ -340,6 +391,7 @@ def main():
     g.add_argument('-q', '--quit', action='store_true')
     g.add_argument('-h', '--help', action='store_true')
     g.add_argument('-i-t', '--if-then', nargs=2, action='append')
+    g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
 
     states_dict = {}
     vars_dict = {}

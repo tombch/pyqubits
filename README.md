@@ -73,6 +73,8 @@ Time taken: 0.030252456665039062 seconds
 ```
 
 ## How to use
+
+### Executing Commands
 This program has various commands that can be used to simulate quantum circuits. These commands can either be entered and executed line-by-line:
 ```
 #~: command_1
@@ -85,7 +87,7 @@ This program has various commands that can be used to simulate quantum circuits.
 ```
 #~: command1 | command2 | command3 | ...
 ``` 
-The pipes are necessary for executing multiple commands on a single line. For details on the available commands, see below.
+The pipes are necessary for executing multiple commands on a single line. For details on the available commands, see further below.
 
 ## Command List
 ### `-n`, `--new`
@@ -93,6 +95,7 @@ The pipes are necessary for executing multiple commands on a single line. For de
 --new s1 s2 s3 ... num_qubits=N state=PRESET_STATE
 ```
 Create multiple new random quantum states, each containing `N` qubits. 
+The names `s1`, `s2`, `s3`, etc of the created quantum states can only contain the numbers 0-9, the lowercase letters a-z and the uppercase letters A-Z.
 * `nq`, `num_qubits` - an optional parameter (default for this parameter is `1`).
 * `s`, `state` - an optional parameter for specifying a preset state (not specifying this parameter means a random state will be created).
     * `state=zero` - used to create multiple new quantum states of the form `|0...0>`, with number of qubits determined by `num_qubits`.
@@ -111,7 +114,7 @@ Join multiple pre-existing quantum states into one quantum state.
 ```
 Print the state vectors for multiple quantum states. 
 
-**WARNING**: with each additional qubit in a state, the number of basis vectors grows exponentially, so print carefully.
+**WARNING**: with each additional qubit added to a state, the number of basis vectors grows exponentially, so print wisely.
 
 ### `-c`, `--circuit`
 ```
@@ -167,7 +170,18 @@ Print the documentation of each command.
 
 ### `i-t`, `--if-then`
 ```
---if-then {condition} {command}
---if-then {condition1} {--if-then {condition2} {...}}
+--if-then {condition} {command1 | command2 | ... }
 ```
-If `condition` is true, then execute `command`. These commands can consequently be nested as shown above.
+If `condition` is true, then execute the commands within the second `{ }`. These commands can consequently be nested:
+```
+--if-then {condition1} {command1 | --if-then {condition2} {command2 | command3 | ...}}
+```
+
+### `i-t-e`, `--if-then-else`
+```
+--if-then {condition} {command1 | command2 ...} {command3 | ...}
+```
+If `condition` is true, then execute the commands within the second `{ }`; otherwise, execute the commands within the third `{ }`. These commands can consequently be nested:
+```
+--if-then-else {condition1} {command1 | command2 | ...} {--if-then-else {condition2} {command3 | command4 | ...} {command5 | command6 | ...}}
+```
