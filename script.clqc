@@ -1,0 +1,18 @@
+--new q state=zero num_qubits=4;
+--state q;
+--apply H q 1;
+--apply CNOT q [1,2];
+--measure q 1 make_vars;
+--state q;
+--if-then-else { q.1 == 0 }  
+{
+    --apply X q 1;
+    --apply Y q 1;
+    --apply Z q 1;
+}
+{
+    --apply Z q 2;
+    --apply Y q 2;
+    --apply X q 2;
+};
+--circuit q;

@@ -213,7 +213,7 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             s = command_args[0]
             args = command_args[1:]
             qubit_refs = []
-            make_var = False
+            make_vars = False
             for a in args:
                 if a.startswith(make_vars_tag[0]) or a.startswith(make_vars_tag[1]):
                     make_vars = True
@@ -238,7 +238,8 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     final_qubits.append(q)
             for q in final_qubits:
                 bit = s.measurement(int(q))
-                vars_dict[f"{s.state_name}.{q}"] = bit
+                if make_vars:
+                    vars_dict[f"{s.state_name}.{q}"] = bit
 
     if command.rename:
         if len(command.rename) != 1:
@@ -371,6 +372,28 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     # Execute the command, and return states_dict, disp_time and command_quit
                     states_dict, vars_dict, disp_time, command_quit = execute_command(parser, else_command, states_dict, vars_dict, disp_time, command_quit)
 
+    if command.execute:
+        if len(command.execute) != 1:
+            raise ArgumentParserError(error_message['too many commands'])
+        else:
+            command_args = command.execute[0]
+            file_name = command_args[0]
+            try:
+                with open(f"{file_name}.clqc", 'r') as file:
+                    script = file.read()
+                    script = script.replace(';', '|')
+                    script = script.replace('\n', ' ')
+                    script = script.replace("{", " { ")
+                    script = script.replace("}", " } ")
+                    script = script.replace("[", " [ ")
+                    script = script.replace("]", " ] ")
+                    script = script.split('|')
+                    script_statements = regroup(script, "{", "}", split_char="|")
+                    for script_statement in script_statements:
+                        script_command = get_command(parser, script_statement)
+                        states_dict, vars_dict, disp_time, command_quit = execute_command(parser, script_command, states_dict, vars_dict, disp_time, command_quit)
+            except FileNotFoundError:
+                raise ArgumentParserError(f"file not found: {file_name}")
 
     return states_dict, vars_dict, disp_time, command_quit
 
@@ -392,6 +415,8 @@ def main():
     g.add_argument('-h', '--help', action='store_true')
     g.add_argument('-i-t', '--if-then', nargs=2, action='append')
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
+    g.add_argument('-f', '--for', nargs=3, action='append')
+    g.add_argument('-e', '--execute', nargs=1, action='append')
 
     states_dict = {}
     vars_dict = {}

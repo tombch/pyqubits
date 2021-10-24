@@ -168,7 +168,7 @@ Quit the program.
 ### `-h`, `--help`
 Print the documentation of each command.
 
-### `i-t`, `--if-then`
+### `-i-t`, `--if-then`
 ```
 --if-then {condition} {command1 | command2 | ... }
 ```
@@ -177,11 +177,72 @@ If `condition` is true, then execute the commands within the second `{ }`. These
 --if-then {condition1} {command1 | --if-then {condition2} {command2 | command3 | ... }}
 ```
 
-### `i-t-e`, `--if-then-else`
+### `-i-t-e`, `--if-then-else`
 ```
 --if-then {condition} {command1 | command2 ... } {command3 | ... }
 ```
 If `condition` is true, then execute the commands within the second `{ }`; otherwise, execute the commands within the third `{ }`. These commands can consequently be nested:
 ```
 --if-then-else {condition1} {command1 | command2 | ... } {--if-then-else {condition2} {command3 | command4 | ... } {command5 | command6 | ... }}
+```
+
+### `-f`, `--for`
+```
+--for i iterable {command1 | command2 | ... }
+```
+Work in progress.
+
+### `-e`, `--execute`
+```
+--execute filename
+```
+Executes the commands within file `filename.clqc`, if it exists. The `.clqc` extension is therefore necessary on any files that are intended to be executed.
+
+For example, the following is a sequence of commands within a file named `script.clqc`:
+```
+--new q state=zero num_qubits=4;
+--state q;
+--apply H q 1;
+--apply CNOT q [1,2];
+--measure q 1 make_vars;
+--state q;
+--if-then-else { q.1 == 0 }  
+{
+    --apply X q 1;
+    --apply Y q 1;
+    --apply Z q 1;
+}
+{
+    --apply Z q 2;
+    --apply Y q 2;
+    --apply X q 2;
+};
+--circuit q;
+```
+Commands within a script such as this can use either `;` or `|` to separate commands. The script can then be executed within the program:
+```
+Welcome to my terminal-based quantum computing simulator.
+Enter --help or -h for more information. To quit the program, enter --quit or -q.
+
+#~: --execute script
+State vector for q [0]:
+q = (1+0j) |0000>
+State vector for q [3]:
+q = (1+0j) |1100>
+Circuit diagram for q:
+ 1   2   3   4
+ |   |   |   |      [0]
+ H   |   |   |
+ |   |   |   |      [1]
+ O---X   |   |
+ |   |   |   |      [2]
+ M===|===|===|===1
+ |   |   |   |      [3]
+ |   Z   |   |
+ |   |   |   |      [4]
+ |   Y   |   |
+ |   |   |   |      [5]
+ |   X   |   |
+ |   |   |   |      [6]
+#~:
 ```
