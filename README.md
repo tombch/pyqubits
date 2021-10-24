@@ -174,14 +174,14 @@ Print the documentation of each command.
 ```
 If `condition` is true, then execute the commands within the second `{ }`. These commands can consequently be nested:
 ```
---if-then {condition1} {command1 | --if-then {condition2} {command2 | command3 | ...}}
+--if-then {condition1} {command1 | --if-then {condition2} {command2 | command3 | ... }}
 ```
 
 ### `i-t-e`, `--if-then-else`
 ```
---if-then {condition} {command1 | command2 ...} {command3 | ...}
+--if-then {condition} {command1 | command2 ... } {command3 | ... }
 ```
 If `condition` is true, then execute the commands within the second `{ }`; otherwise, execute the commands within the third `{ }`. These commands can consequently be nested:
 ```
---if-then-else {condition1} {command1 | command2 | ...} {--if-then-else {condition2} {command3 | command4 | ...} {command5 | command6 | ...}}
+--if-then-else {condition1} {command1 | command2 | ... } {--if-then-else {condition2} {command3 | command4 | ... } {command5 | command6 | ... }}
 ```
