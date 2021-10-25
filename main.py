@@ -7,6 +7,8 @@ import re
 import gates
 from quantum_state import QuantumState
 from messages import help_message, error_message
+import cProfile, pstats, io
+from pstats import SortKey
 
 class ArgumentParserError(Exception): 
     pass
@@ -17,8 +19,8 @@ class ThrowingArgumentParser(argparse.ArgumentParser):
 
 def regroup(split_statement, left_char, right_char, split_char=""):
     '''
-    regroup expressions/lists.
-    important to specify split_char, otherwise regrouped expressions/lists will not be reconstructed correctly.
+    regroup expressions/lists after separation caused by splitting the string on split_char
+    split_char must be specified when calling regroup, otherwise expressions/lists may be reconstructed incorrectly.
     '''
     regrouped_expressions = []
     num_splits = len(split_statement)
@@ -48,13 +50,18 @@ def regroup(split_statement, left_char, right_char, split_char=""):
         raise ArgumentParserError(f"incorrect list syntax: missing '{left_char}'")
     return regrouped_expressions
 
-def get_command(parser, statement):
-    # Split the current statement on empty space
-    split_statement = statement.split()
-    command_args = regroup(split_statement, "{", "}", split_char=" ")
-    command_args = regroup(command_args, "[", "]", split_char=" ")
-    command = parser.parse_args(command_args)
-    return command
+def get_commands(parser, statements):
+    statements = statements.split('|')
+    statements = regroup(statements, "{", "}", split_char="|")
+    commands = []
+    for statement in statements:
+        # Split the current statement on empty space
+        split_statement = statement.split()
+        command_args = regroup(split_statement, "{", "}", split_char=" ")
+        command_args = regroup(command_args, "[", "]", split_char=" ")
+        command = parser.parse_args(command_args)
+        commands.append(command)
+    return commands
 
 def execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit):
     if command.new:
@@ -314,13 +321,11 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                 if left_hs == right_hs:
                     execute_then_statements = True
             if execute_then_statements:
-                then_statements = then_statements.split('|')
-                then_statements = regroup(then_statements, "{", "}", split_char="|")
-                for then_statement in then_statements:
-                    # Parse the current statement and return a command that can be acted on
-                    then_command = get_command(parser, then_statement)
-                    # Execute the command, and return states_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, then_command, states_dict, vars_dict, disp_time, command_quit)
+                # Parse the current statement(s) and return command(s) that can be acted on
+                commands = get_commands(parser, then_statements)
+                for command in commands:
+                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
 
     if command.if_then_else:
         if len(command.if_then_else) != 1:
@@ -356,43 +361,36 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                 if left_hs == right_hs:
                     execute_then_statements = True
             if execute_then_statements:
-                then_statements = then_statements.split('|')
-                then_statements = regroup(then_statements, "{", "}", split_char="|")
-                for then_statement in then_statements:
-                    # Parse the current statement and return a command that can be acted on
-                    then_command = get_command(parser, then_statement)
-                    # Execute the command, and return states_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, then_command, states_dict, vars_dict, disp_time, command_quit)
+                # Parse the current statement(s) and return command(s) that can be acted on
+                commands = get_commands(parser, then_statements)
+                for command in commands:
+                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
             else:
-                else_statements = else_statements.split('|')
-                else_statements = regroup(else_statements, "{", "}", split_char="|")
-                for else_statement in else_statements:
-                    # Parse the current statement and return a command that can be acted on
-                    else_command = get_command(parser, else_statement)
-                    # Execute the command, and return states_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, else_command, states_dict, vars_dict, disp_time, command_quit)
+                # Parse the current statement(s) and return command(s) that can be acted on
+                commands = get_commands(parser, else_statements)
+                for command in commands:
+                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
 
     if command.for_each:
         if len(command.for_each) != 1:
             raise ArgumentParserError(error_message['too many commands'])
         else:
             command_args = command.for_each[0]
+            # To do: (attempt) implementing substitution of i_arg into commands
             i_arg = command_args[0]
             iterable_arg = command_args[1]
-            for_statements = command_args[2][1:len(command_args[2])-1]
-            iterable = eval(iterable_arg)
-            for_statements = for_statements.split('|')
-            for_statements = regroup(for_statements, "{", "}", split_char="|")
-            for_commands = []
-            for for_statement in for_statements:
-                # Parse the current statement and return a command that can be acted on
-                for_commands.append(get_command(parser, for_statement))
+            statements = command_args[2][1:len(command_args[2])-1]
+            # iterable = eval(iterable_arg) # Just no
+            iterable = range(int(iterable_arg))
+            # Parse the current statement(s) and return command(s) that can be acted on
+            commands = get_commands(parser, statements)
+            # iterate a number of times as specified by user
             for i in iterable:
-                for for_command in for_commands:
-                    # Execute the command, and return states_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, for_command, states_dict, vars_dict, disp_time, command_quit)
-
-
+                for command in commands:
+                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
+                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
 
     if command.execute:
         if len(command.execute) != 1:
@@ -409,11 +407,12 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     script = script.replace("}", " } ")
                     script = script.replace("[", " [ ")
                     script = script.replace("]", " ] ")
-                    script = script.split('|')
-                    script_statements = regroup(script, "{", "}", split_char="|")
-                    for script_statement in script_statements:
-                        script_command = get_command(parser, script_statement)
-                        states_dict, vars_dict, disp_time, command_quit = execute_command(parser, script_command, states_dict, vars_dict, disp_time, command_quit)
+                    # Parse the current statement(s) and return command(s) that can be acted on
+                    commands = get_commands(parser, script)
+                    for command in commands:
+                        # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
+                        states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
+
             except FileNotFoundError:
                 raise ArgumentParserError(f"file not found: {file_name}")
 
@@ -444,21 +443,29 @@ def main():
     vars_dict = {}
     disp_time = False
     command_quit = False
+
     while not command_quit:
         try:      
             # Take user input and separate statements by splitting on pipes
             statements = input('#~: ')
+            pr = cProfile.Profile()
             start = time.time()
+            pr.enable()
             successful_executes = 0
-            statements = statements.split('|')
-            statements = regroup(statements, "{", "}", split_char="|")
-            for statement in statements:
-                # Parse the current statement and return a command that can be acted on
-                command = get_command(parser, statement)
-                # Execute the command, and return states_dict, disp_time and command_quit
+            # Parse the current statement(s) and return command(s) that can be acted on
+            commands = get_commands(parser, statements)
+            for command in commands:
+                # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
                 states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
-                successful_executes += 1
+                successful_executes += 1                
+            pr.disable()
             end = time.time()
+            s = io.StringIO()
+            sortby = SortKey.CUMULATIVE
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            # ps.print_stats()
+            # print(s.getvalue())
+
             if disp_time:
                 print("Time taken: " + str(end - start) + " seconds")
 

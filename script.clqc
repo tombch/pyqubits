@@ -12,7 +12,7 @@
 }
 {
     --measure q 2 make_vars;
-    --if-then-else { q.2 == 0}
+    --if-then-else { q.2 == 0 }
     {
         --apply H q 3;
     }
