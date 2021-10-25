@@ -8,7 +8,6 @@ import gates
 from quantum_state import QuantumState
 from messages import help_message, error_message
 import cProfile, pstats, io
-from pstats import SortKey
 
 class ArgumentParserError(Exception): 
     pass
@@ -63,7 +62,7 @@ def get_commands(parser, statements):
         commands.append(command)
     return commands
 
-def execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit):
+def execute_command(parser, command, env):
     if command.new:
         num_qubits_tag = ['nq=', 'num_qubits=']
         preset_state_tag = ['s=', 'state=']
@@ -91,7 +90,7 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                 else:
                     new_states.append(s)
             for s in new_states:
-                states_dict[s] = QuantumState(num_qubits=num_qubits, state_name=s, preset_state=preset_state)                
+                env['states_dict'][s] = QuantumState(num_qubits=num_qubits, state_name=s, preset_state=preset_state)                
 
     if command.join:
         name_tag = 'name='
@@ -105,47 +104,47 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             for s in command_args:
                 if s.startswith(name_tag):
                     joint_state_name = s[len(name_tag):]
-                elif s in states_dict:
-                    states_being_joined.append(states_dict[s])
+                elif s in env['states_dict']:
+                    states_being_joined.append(env['states_dict'][s])
                     states_to_pop.append(s)
                 else:
                     raise ArgumentParserError(f"invalid parameter assignment or state that doesn't exist: {s}")
             for s in states_to_pop:
-                states_dict.pop(s)                               
+                env['states_dict'].pop(s)                               
             joint_state = functools.reduce(QuantumState.__mul__, states_being_joined)
             if joint_state_name:
                 joint_state.state_name = joint_state_name
-            states_dict[joint_state.state_name] = joint_state
+            env['states_dict'][joint_state.state_name] = joint_state
 
     if command.state:
         if len(command.state) != 1:
             raise ArgumentParserError(error_message['too many commands'])
         else:
             for x in command.state[0]:
-                if not x in states_dict:
+                if not x in env['states_dict']:
                     raise ArgumentParserError(f"{error_message['state not found']}: {x}")
                 else:
-                    states_dict[x].print_state()
+                    env['states_dict'][x].print_state()
             
     if command.circuit:
         if len(command.circuit) != 1:
             raise ArgumentParserError(error_message['too many commands'])
         else:
             for x in command.circuit[0]:
-                if not x in states_dict:
+                if not x in env['states_dict']:
                     raise ArgumentParserError(f"{error_message['state not found']}: {x}")
                 else:
-                    states_dict[x].print_circuit()
+                    env['states_dict'][x].print_circuit()
             
     if command.probs:
         if len(command.probs) != 1:
             raise ArgumentParserError(error_message['too many commands'])
         else:
             for x in command.probs[0]:
-                if not x in states_dict:
+                if not x in env['states_dict']:
                     raise ArgumentParserError(f"{error_message['state not found']}: {x}")
                 else:
-                    states_dict[x].print_probabilities()
+                    env['states_dict'][x].print_probabilities()
 
     if command.apply:
         def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
@@ -198,10 +197,10 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             gate_name = command_args[0]
             s = command_args[1]
             qubit_refs = command_args[2:]
-            if s not in states_dict:
+            if s not in env['states_dict']:
                 raise ArgumentParserError(f"{error_message['state not found']}: {s}")
             else: 
-                s = states_dict[s]
+                s = env['states_dict'][s]
             if not qubit_refs:
                 raise ArgumentParserError(f"{error_message['no qubit ref']}")
             if gate_name in gates.one_arg_gates:
@@ -226,10 +225,10 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     make_vars = True
                 else:
                     qubit_refs.append(a)
-            if s not in states_dict:
+            if s not in env['states_dict']:
                 raise ArgumentParserError(f"{error_message['state not found']}: {s}")
             else:
-                s = states_dict[s]
+                s = env['states_dict'][s]
             if not qubit_refs:
                 raise ArgumentParserError(f"{error_message['no qubit ref']}")
             final_qubits = []
@@ -246,7 +245,7 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             for q in final_qubits:
                 bit = s.measurement(int(q))
                 if make_vars:
-                    vars_dict[f"{s.state_name}.{q}"] = bit
+                    env['vars_dict'][f"{s.state_name}.{q}"] = bit
 
     if command.rename:
         if len(command.rename) != 1:
@@ -255,15 +254,15 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             command_args = command.rename[0]
             s = command_args[0]
             new_s = command_args[1]
-            if s not in states_dict:
+            if s not in env['states_dict']:
                 raise ArgumentParserError(f"{error_message['state not found']}: {s}")                                   
             illegal_chars = re.search("[^0-9a-zA-Z]", new_s)
             if illegal_chars:
                 raise ArgumentParserError(f"invalid character(s) in state name: {new_s[illegal_chars.span()[0]]}")
-            s_object = states_dict[s]
+            s_object = env['states_dict'][s]
             s_object.state_name = new_s
-            states_dict.pop(s)
-            states_dict.update({new_s : s_object})
+            env['states_dict'].pop(s)
+            env['states_dict'].update({new_s : s_object})
 
     if command.timer:
         if len(command.timer) != 1:
@@ -272,18 +271,18 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             command_args = command.timer[0]
             decision = command_args[0].upper()
             if decision == "ON":
-                disp_time = True 
+                env['disp_time'] = True 
             elif decision == "OFF":
-                disp_time = False
+                env['disp_time'] = False
             else:
                 raise ArgumentParserError(f"incorrect option for timer: {decision}")
 
     if command.list:
-        print(f"states: {list(states_dict.keys())}")
-        print(f"variables: {list(vars_dict.keys())}")
+        print(f"states: {list(env['states_dict'].keys())}")
+        print(f"variables: {list(env['vars_dict'].keys())}")
 
     if command.quit:
-        command_quit = True
+        env['quit_program'] = True
                     
     if command.help:
         print(help_message)
@@ -304,15 +303,15 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             else:
                 left_hs = if_condition[0]
                 right_hs = if_condition[1]
-                if left_hs in vars_dict: 
-                    left_hs = vars_dict[left_hs]
+                if left_hs in env['vars_dict']: 
+                    left_hs = env['vars_dict'][left_hs]
                 elif isinstance(json.loads(left_hs), int):
                     left_hs = int(left_hs)
                 else:
                     # error 
                     pass
-                if right_hs in vars_dict:
-                    right_hs = vars_dict[right_hs]
+                if right_hs in env['vars_dict']:
+                    right_hs = env['vars_dict'][right_hs]
                 elif isinstance(json.loads(right_hs), int):
                     right_hs = int(right_hs)
                 else:
@@ -324,8 +323,8 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                 # Parse the current statement(s) and return command(s) that can be acted on
                 commands = get_commands(parser, then_statements)
                 for command in commands:
-                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
+                    # Execute the current command, and return env
+                    env = execute_command(parser, command, env)
 
     if command.if_then_else:
         if len(command.if_then_else) != 1:
@@ -344,15 +343,15 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             else:
                 left_hs = if_condition[0]
                 right_hs = if_condition[1]
-                if left_hs in vars_dict: 
-                    left_hs = vars_dict[left_hs]
+                if left_hs in env['vars_dict']: 
+                    left_hs = env['vars_dict'][left_hs]
                 elif isinstance(json.loads(left_hs), int):
                     left_hs = int(left_hs)
                 else:
                     # error 
                     pass
-                if right_hs in vars_dict:
-                    right_hs = vars_dict[right_hs]
+                if right_hs in env['vars_dict']:
+                    right_hs = env['vars_dict'][right_hs]
                 elif isinstance(json.loads(right_hs), int):
                     right_hs = int(right_hs)
                 else:
@@ -364,14 +363,14 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                 # Parse the current statement(s) and return command(s) that can be acted on
                 commands = get_commands(parser, then_statements)
                 for command in commands:
-                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
+                    # Execute the current command, and return env
+                    env = execute_command(parser, command, env)
             else:
                 # Parse the current statement(s) and return command(s) that can be acted on
                 commands = get_commands(parser, else_statements)
                 for command in commands:
-                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
+                    # Execute the current command, and return env
+                    env = execute_command(parser, command, env)
 
     if command.for_each:
         if len(command.for_each) != 1:
@@ -389,8 +388,8 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
             # iterate a number of times as specified by user
             for i in iterable:
                 for command in commands:
-                    # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
-                    states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
+                    # Execute the current command, and return env
+                    env = execute_command(parser, command, env)
 
     if command.execute:
         if len(command.execute) != 1:
@@ -410,13 +409,12 @@ def execute_command(parser, command, states_dict, vars_dict, disp_time, command_
                     # Parse the current statement(s) and return command(s) that can be acted on
                     commands = get_commands(parser, script)
                     for command in commands:
-                        # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
-                        states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
-
+                        # Execute the current command, and return env
+                        env = execute_command(parser, command, env)
             except FileNotFoundError:
                 raise ArgumentParserError(f"file not found: {file_name}")
 
-    return states_dict, vars_dict, disp_time, command_quit
+    return env
 
 def main():
     print("Welcome to my terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.\n")
@@ -438,41 +436,36 @@ def main():
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
     g.add_argument('-f-e', '--for-each', nargs=3, action='append')
     g.add_argument('-e', '--execute', nargs=1, action='append')
+    env = {}
+    env['states_dict'] = {}
+    env['vars_dict'] = {}
+    env['disp_time'] = False
+    env['quit_program'] = False
 
-    states_dict = {}
-    vars_dict = {}
-    disp_time = False
-    command_quit = False
-
-    while not command_quit:
+    while not env['quit_program']:
         try:      
-            # Take user input and separate statements by splitting on pipes
             statements = input('#~: ')
-            pr = cProfile.Profile()
             start = time.time()
-            pr.enable()
+            # pr = cProfile.Profile()
+            # pr.enable()
             successful_executes = 0
             # Parse the current statement(s) and return command(s) that can be acted on
             commands = get_commands(parser, statements)
             for command in commands:
-                # Execute the current command, and return states_dict, vars_dict, disp_time and command_quit
-                states_dict, vars_dict, disp_time, command_quit = execute_command(parser, command, states_dict, vars_dict, disp_time, command_quit)
+                # Execute the current command, and return env
+                env = execute_command(parser, command, env)
                 successful_executes += 1                
-            pr.disable()
-            end = time.time()
-            s = io.StringIO()
-            sortby = SortKey.CUMULATIVE
-            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            # pr.disable()
+            # s = io.StringIO()
+            # ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
             # ps.print_stats()
             # print(s.getvalue())
-
-            if disp_time:
+            end = time.time()
+            if env['disp_time']:
                 print("Time taken: " + str(end - start) + " seconds")
-
         except ArgumentParserError as e:
             print(f"ERROR: {e}")
             print(f"commands successfully executed: {successful_executes}")
-              
     quit()
 
 if __name__ == '__main__':
