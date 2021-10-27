@@ -7,22 +7,33 @@ symbol = {
     'and' : '/\\',
     'or' : '\\/',
     'not' : '¬',
+    'eq' : '==',
+    'ne' : '!=',
+    'lt' : '<',
+    'gt' : '>',
+    'leq' : '<=',
+    'geq' : '>=',
     'True' : 'T',
-    'False' : 'F'
+    'False' : 'F' 
 }
 
 env = {
     symbol['and'] : operator.__and__,
     symbol['or'] : operator.__or__,
     symbol['not'] : operator.__not__,
+    symbol['eq'] : operator.__eq__,
+    symbol['ne'] : operator.__ne__,
+    symbol['lt'] : operator.__lt__,
+    symbol['gt'] : operator.__gt__,
+    symbol['leq'] : operator.__le__,
+    symbol['geq'] : operator.__ge__,
     symbol['True'] : True,
     symbol['False'] : False
 }
 
 def get_tokens(user_input):
-    user_input = user_input.replace(symbol['and'], f" {symbol['and']} ")
-    user_input = user_input.replace(symbol['or'], f" {symbol['or']} ")
-    user_input = user_input.replace(symbol['not'], f" {symbol['not']} ")
+    for k in symbol.keys():
+        user_input = user_input.replace(symbol[k], f" {symbol[k]} ")        
     user_input = user_input.replace('(', ' ( ')
     user_input = user_input.replace(')', ' ) ')
     tokens = user_input.split()
@@ -43,7 +54,13 @@ def get_expression(tokens):
                 i += sub_i + 1
                 expression.append(sub_expression)
             elif tokens[i] != ')':
-                expression.append(env[tokens[i]])
+                if tokens[i] in env:
+                    expression.append(env[tokens[i]])
+                else:
+                    try:
+                        expression.append(int(tokens[i]))
+                    except ValueError:
+                        raise LogicEvaluatorError(f'incomparable object: {tokens[i]}')
                 i += 1                
             else:
                 i += 1
@@ -53,6 +70,8 @@ def get_expression(tokens):
 def evaluate(expr):
     if isinstance(expr, bool):
         return expr
+    elif isinstance(expr, int):
+        return expr
     elif isinstance(expr, list):
         if (env[symbol['and']] in expr) and len(expr) == 3:
             return env[symbol['and']](evaluate(expr[0]), evaluate(expr[2]))
@@ -60,6 +79,18 @@ def evaluate(expr):
             return env[symbol['or']](evaluate(expr[0]), evaluate(expr[2]))
         elif (env[symbol['not']] in expr) and len(expr) == 2:
             return env[symbol['not']](evaluate(expr[1]))
+        elif (env[symbol['eq']] in expr) and len(expr) == 3:
+            return env[symbol['eq']](evaluate(expr[0]), evaluate(expr[2]))
+        elif (env[symbol['ne']] in expr) and len(expr) == 3:
+            return env[symbol['ne']](evaluate(expr[0]), evaluate(expr[2]))
+        elif (env[symbol['lt']] in expr) and len(expr) == 3:
+            return env[symbol['lt']](evaluate(expr[0]), evaluate(expr[2]))
+        elif (env[symbol['gt']] in expr) and len(expr) == 3:
+            return env[symbol['gt']](evaluate(expr[0]), evaluate(expr[2]))
+        elif (env[symbol['leq']] in expr) and len(expr) == 3:
+            return env[symbol['leq']](evaluate(expr[0]), evaluate(expr[2]))
+        elif (env[symbol['geq']] in expr) and len(expr) == 3:
+            return env[symbol['geq']](evaluate(expr[0]), evaluate(expr[2]))
         elif len(expr) == 1:
             return evaluate(expr[0]) 
         else:
