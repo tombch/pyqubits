@@ -32,6 +32,8 @@ env = {
 }
 
 def get_tokens(user_input):
+    if user_input.count('(') != user_input.count(')'):
+        raise LogicEvaluatorError('incorrect syntax')
     for k in symbol.keys():
         user_input = user_input.replace(symbol[k], f" {symbol[k]} ")        
     user_input = user_input.replace('(', ' ( ')
@@ -60,7 +62,7 @@ def get_expression(tokens):
                     try:
                         expression.append(int(tokens[i]))
                     except ValueError:
-                        raise LogicEvaluatorError(f'incomparable object: {tokens[i]}')
+                        raise LogicEvaluatorError(f'unrecognised or incomparable object: {tokens[i]}')
                 i += 1                
             else:
                 i += 1
@@ -94,13 +96,23 @@ def evaluate(expr):
         elif len(expr) == 1:
             return evaluate(expr[0]) 
         else:
-            raise LogicEvaluatorError('ambiguous expression (needs parentheses)')
-    
+            raise LogicEvaluatorError('incorrect syntax')
+
+def interpret(user_input, user_env=None):
+    if user_env is not None:
+        env.update(user_env)
+    try:
+        condition = evaluate(get_expression(get_tokens(user_input))[0])
+        return condition
+    except LogicEvaluatorError as msg:
+        print(f'logic error: {msg}')
+        return None
+
 def main():
     while True:
         try: 
             user_input = input('> ')
-            print(evaluate(get_expression(get_tokens(user_input))[0]))
+            print(interpret(user_input))
         except LogicEvaluatorError as msg:
             print(f"error: {msg}")
 
