@@ -89,6 +89,9 @@ This program has various commands that can be used to simulate quantum circuits.
 ``` 
 The pipes are necessary for executing multiple commands on a single line. For details on the available commands, see further below.
 
+### Conditions
+Work in progress.
+
 ## Command List
 ### `-n`, `--new`
 ```
@@ -172,7 +175,9 @@ Print the documentation of each command.
 ```
 --if-then {condition} {command1 | command2 | ... }
 ```
-If `condition` is true, then execute the commands within the second `{ }`. These commands can consequently be nested:
+If `condition` is true, then execute the commands within the second `{ }`. 
+
+These commands can consequently be nested:
 ```
 --if-then {condition1} {command1 | --if-then {condition2} {command2 | command3 | ... }}
 ```
@@ -181,16 +186,18 @@ If `condition` is true, then execute the commands within the second `{ }`. These
 ```
 --if-then {condition} {command1 | command2 ... } {command3 | ... }
 ```
-If `condition` is true, then execute the commands within the second `{ }`; otherwise, execute the commands within the third `{ }`. These commands can consequently be nested:
+If `condition` is true, then execute the commands within the second `{ }`; otherwise, execute the commands within the third `{ }`. 
+
+These commands can consequently be nested:
 ```
 --if-then-else {condition1} {command1 | command2 | ... } {--if-then-else {condition2} {command3 | command4 | ... } {command5 | command6 | ... }}
 ```
 
 ### `-f-e`, `--for-each`
 ```
---for-each i iterable {command1 | command2 | ... }
+--for-each i iter_args {command1 | command2 | ... }
 ```
-Work in progress.
+Work in progress. `iter_args` is a user supplied tuple that is passed to `range`, resulting in the iterable `range(*iter_args)` (needs rewording).
 
 ### `-e`, `--execute`
 ```
