@@ -6,7 +6,7 @@ class LogicEvaluatorError(Exception):
 symbol = {
     'and' : '/\\',
     'or' : '\\/',
-    'not' : '¬',
+    'not' : '^',
     'eq' : '==',
     'ne' : '!=',
     'lt' : '<',
