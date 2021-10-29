@@ -315,7 +315,7 @@ def execute_commands(parser, commands, env):
             iterable = range(*tuple(iterable_arg))
             # iterate a number of times as specified by user
             for i in iterable:
-                statements_i = statements.replace(f' {i_arg}}}', f' {i} ')
+                statements_i = statements.replace(f' {i_arg}}}', f' {i}}}')
                 statements_i = statements.replace(f' {i_arg} ', f' {i} ')
                 statements_i = statements_i[1:len(command_args[2])-1]
                 commands = get_commands(parser, statements_i)
