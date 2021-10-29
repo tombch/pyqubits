@@ -4,11 +4,13 @@ import argparse
 import functools
 import json
 import re
+import copy
+import cProfile, pstats, io
 import logic_evaluator
 import gates
 from quantum_state import QuantumState
 from messages import help_message, error_message
-import cProfile, pstats, io
+
 
 class ArgumentParserError(Exception):
     __slots = 'message'
@@ -66,96 +68,89 @@ def get_commands(parser, statements):
         split_statement = statement.split()
         command_args = regroup(split_statement, "{", "}", split_char=" ")
         command_args = regroup(command_args, "[", "]", split_char=" ")
+        command_args = regroup(command_args, "(", ")", split_char=" ")
         command = parser.parse_args(command_args)
         commands.append(command)
     return commands
 
+def single_command(command_obj):
+    if len(command_obj) != 1:
+        raise ArgumentParserError(error_message['too many commands'])
+    else:
+        return True
+
 def execute_commands(parser, commands, env):
+    env = copy.deepcopy(env)
     for command in commands:
-        if command.new:
-            num_qubits_tag = ['nq=', 'num_qubits=']
+        if command.new and single_command(command.new):
+            num_qubits_tag = ['nq=', 'qubits=']
             preset_state_tag = ['s=', 'state=']
-            if len(command.new) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.new[0]
-                new_states = []
-                num_qubits = 1
-                preset_state = None
-                for s in command_args:
-                    illegal_chars = re.search("[^0-9a-zA-Z]", s)
-                    if s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
-                        if s.startswith(num_qubits_tag[0]): 
-                            num_qubits = int(s[len(num_qubits_tag[0]):])
-                        else:
-                            num_qubits = int(s[len(num_qubits_tag[1]):])
-                    elif s.startswith(preset_state_tag[0]) or s.startswith(preset_state_tag[1]):
-                        if s.startswith(preset_state_tag[0]):
-                            preset_state = str(s[len(preset_state_tag[0]):])
-                        else:
-                            preset_state = str(s[len(preset_state_tag[1]):])
-                    elif illegal_chars:
-                        raise ArgumentParserError(f"invalid character(s) in state name: {s[illegal_chars.span()[0]]}")
+            command_args = command.new[0]
+            new_states = []
+            num_qubits = 1
+            preset_state = None
+            for s in command_args:
+                illegal_chars = re.search("[^0-9a-zA-Z]", s)
+                if s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
+                    if s.startswith(num_qubits_tag[0]): 
+                        num_qubits = int(s[len(num_qubits_tag[0]):])
                     else:
-                        new_states.append(s)
-                for s in new_states:
-                    env['states_dict'][s] = QuantumState(num_qubits=num_qubits, state_name=s, preset_state=preset_state)                
+                        num_qubits = int(s[len(num_qubits_tag[1]):])
+                elif s.startswith(preset_state_tag[0]) or s.startswith(preset_state_tag[1]):
+                    if s.startswith(preset_state_tag[0]):
+                        preset_state = str(s[len(preset_state_tag[0]):])
+                    else:
+                        preset_state = str(s[len(preset_state_tag[1]):])
+                elif illegal_chars:
+                    raise ArgumentParserError(f"invalid character(s) in state name: {s[illegal_chars.span()[0]]}")
+                else:
+                    new_states.append(s)
+            for s in new_states:
+                env['states_dict'][s] = QuantumState(num_qubits=num_qubits, state_name=s, preset_state=preset_state)                
 
-        if command.join:
+        if command.join and single_command(command.join):           
             name_tag = 'name='
-            if len(command.join) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.join[0]
-                states_being_joined = []
-                states_to_pop = []
-                joint_state_name = ""
-                for s in command_args:
-                    if s.startswith(name_tag):
-                        joint_state_name = s[len(name_tag):]
-                    elif s in env['states_dict']:
-                        states_being_joined.append(env['states_dict'][s])
-                        states_to_pop.append(s)
-                    else:
-                        raise ArgumentParserError(f"invalid parameter assignment or state that doesn't exist: {s}")
-                for s in states_to_pop:
-                    env['states_dict'].pop(s)                               
-                joint_state = functools.reduce(QuantumState.__mul__, states_being_joined)
-                if joint_state_name:
-                    joint_state.state_name = joint_state_name
-                env['states_dict'][joint_state.state_name] = joint_state
+            command_args = command.join[0]
+            states_being_joined = []
+            states_to_pop = []
+            joint_state_name = ""
+            for s in command_args:
+                if s.startswith(name_tag):
+                    joint_state_name = s[len(name_tag):]
+                elif s in env['states_dict']:
+                    states_being_joined.append(env['states_dict'][s])
+                    states_to_pop.append(s)
+                else:
+                    raise ArgumentParserError(f"invalid parameter assignment or state that doesn't exist: {s}")
+            for s in states_to_pop:
+                env['states_dict'].pop(s)                               
+            joint_state = functools.reduce(QuantumState.__mul__, states_being_joined)
+            if joint_state_name:
+                joint_state.state_name = joint_state_name
+            env['states_dict'][joint_state.state_name] = joint_state
 
-        if command.state:
-            if len(command.state) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                for x in command.state[0]:
-                    if not x in env['states_dict']:
-                        raise ArgumentParserError(f"{error_message['state not found']}: {x}")
-                    else:
-                        env['states_dict'][x].print_state()
+        if command.state and single_command(command.state):
+            for x in command.state[0]:
+                if not x in env['states_dict']:
+                    raise ArgumentParserError(f"{error_message['state not found']}: {x}")
+                else:
+                    env['states_dict'][x].print_state()
                 
-        if command.circuit:
-            if len(command.circuit) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                for x in command.circuit[0]:
-                    if not x in env['states_dict']:
-                        raise ArgumentParserError(f"{error_message['state not found']}: {x}")
-                    else:
-                        env['states_dict'][x].print_circuit()
+        if command.circuit and single_command(command.circuit):
+            for x in command.circuit[0]:
+                if not x in env['states_dict']:
+                    raise ArgumentParserError(f"{error_message['state not found']}: {x}")
+                else:
+                    env['states_dict'][x].print_circuit()
                 
-        if command.probs:
-            if len(command.probs) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                for x in command.probs[0]:
-                    if not x in env['states_dict']:
-                        raise ArgumentParserError(f"{error_message['state not found']}: {x}")
-                    else:
-                        env['states_dict'][x].print_probabilities()
+        if command.probs and single_command(command.probs):
+            for x in command.probs[0]:
+                if not x in env['states_dict']:
+                    raise ArgumentParserError(f"{error_message['state not found']}: {x}")
+                else:
+                    env['states_dict'][x].print_probabilities()
 
-        if command.apply:
+        if command.apply and single_command(command.apply):
             def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
                 if required_num_qubits == 1:
                     gate_func = gates.one_arg_gates.get(gate_name)
@@ -199,92 +194,80 @@ def execute_commands(parser, commands, env):
                         for q in qs:
                             qs_list.append(q)
                     gate_func(s, *qs_list)
-            if len(command.apply) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.apply[0]
-                gate_name = command_args[0]
-                s = command_args[1]
-                qubit_refs = command_args[2:]
-                if s not in env['states_dict']:
-                    raise ArgumentParserError(f"{error_message['state not found']}: {s}")
-                else: 
-                    s = env['states_dict'][s]
-                if not qubit_refs:
-                    raise ArgumentParserError(f"{error_message['no qubit ref']}")
-                if gate_name in gates.one_arg_gates:
-                    check_qubits_apply_gate(s, 1, qubit_refs, gate_name)                       
-                elif gate_name in gates.two_arg_gates:
-                    check_qubits_apply_gate(s, 2, qubit_refs, gate_name)
-                else: 
-                    raise ArgumentParserError(f"{error_message['gate not found']}: {gate_name}")             
+            command_args = command.apply[0]
+            gate_name = command_args[0]
+            s = command_args[1]
+            qubit_refs = command_args[2:]
+            if s not in env['states_dict']:
+                raise ArgumentParserError(f"{error_message['state not found']}: {s}")
+            else: 
+                s = env['states_dict'][s]
+            if not qubit_refs:
+                raise ArgumentParserError(f"{error_message['no qubit ref']}")
+            if gate_name in gates.one_arg_gates:
+                check_qubits_apply_gate(s, 1, qubit_refs, gate_name)                       
+            elif gate_name in gates.two_arg_gates:
+                check_qubits_apply_gate(s, 2, qubit_refs, gate_name)
+            else: 
+                raise ArgumentParserError(f"{error_message['gate not found']}: {gate_name}")             
 
-        if command.measure:
-            make_vars_tag = ['mv', 'make_vars']
-            if len(command.measure) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.measure[0]
-                s = command_args[0]
-                args = command_args[1:]
-                qubit_refs = []
-                make_vars = False
-                for a in args:
-                    if a.startswith(make_vars_tag[0]) or a.startswith(make_vars_tag[1]):
-                        make_vars = True
-                    else:
-                        qubit_refs.append(a)
-                if s not in env['states_dict']:
-                    raise ArgumentParserError(f"{error_message['state not found']}: {s}")
+        if command.measure and single_command(command.measure):
+            make_vars_tag = ['vars', 'variables']
+            command_args = command.measure[0]
+            s = command_args[0]
+            args = command_args[1:]
+            qubit_refs = []
+            make_vars = False
+            for a in args:
+                if a.startswith(make_vars_tag[0]) or a.startswith(make_vars_tag[1]):
+                    make_vars = True
                 else:
-                    s = env['states_dict'][s]
-                if not qubit_refs:
-                    raise ArgumentParserError(f"{error_message['no qubit ref']}")
-                final_qubits = []
-                for q in qubit_refs:
-                    try:
-                        q = json.loads(q)
-                        q = int(q)
-                    except (json.decoder.JSONDecodeError, TypeError, ValueError):
-                        raise ArgumentParserError(f"{error_message['invalid qubit ref']}: {q}")
-                    if not (0 <= q <= s.num_qubits):
-                        raise ArgumentParserError(f"qubit reference(s) out of bounds: {q}")        
-                    else:
-                        final_qubits.append(q)
-                for q in final_qubits:
-                    bit = s.measurement(int(q))
-                    if make_vars:
-                        env['vars_dict'][f"{s.state_name}.{q}"] = bit
-
-        if command.rename:
-            if len(command.rename) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
+                    qubit_refs.append(a)
+            if s not in env['states_dict']:
+                raise ArgumentParserError(f"{error_message['state not found']}: {s}")
             else:
-                command_args = command.rename[0]
-                s = command_args[0]
-                new_s = command_args[1]
-                if s not in env['states_dict']:
-                    raise ArgumentParserError(f"{error_message['state not found']}: {s}")                                   
-                illegal_chars = re.search("[^0-9a-zA-Z]", new_s)
-                if illegal_chars:
-                    raise ArgumentParserError(f"invalid character(s) in state name: {new_s[illegal_chars.span()[0]]}")
-                s_object = env['states_dict'][s]
-                s_object.state_name = new_s
-                env['states_dict'].pop(s)
-                env['states_dict'].update({new_s : s_object})
-
-        if command.timer:
-            if len(command.timer) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.timer[0]
-                decision = command_args[0].upper()
-                if decision == "ON":
-                    env['disp_time'] = True 
-                elif decision == "OFF":
-                    env['disp_time'] = False
+                s = env['states_dict'][s]
+            if not qubit_refs:
+                raise ArgumentParserError(f"{error_message['no qubit ref']}")
+            final_qubits = []
+            for q in qubit_refs:
+                try:
+                    q = json.loads(q)
+                    q = int(q)
+                except (json.decoder.JSONDecodeError, TypeError, ValueError):
+                    raise ArgumentParserError(f"{error_message['invalid qubit ref']}: {q}")
+                if not (0 <= q <= s.num_qubits):
+                    raise ArgumentParserError(f"qubit reference(s) out of bounds: {q}")        
                 else:
-                    raise ArgumentParserError(f"incorrect option for timer: {decision}")
+                    final_qubits.append(q)
+            for q in final_qubits:
+                bit = s.measurement(int(q))
+                if make_vars:
+                    env['vars_dict'][f"{s.state_name}.{q}"] = bit
+
+        if command.rename and single_command(command.rename):
+            command_args = command.rename[0]
+            s = command_args[0]
+            new_s = command_args[1]
+            if s not in env['states_dict']:
+                raise ArgumentParserError(f"{error_message['state not found']}: {s}")                                   
+            illegal_chars = re.search("[^0-9a-zA-Z]", new_s)
+            if illegal_chars:
+                raise ArgumentParserError(f"invalid character(s) in state name: {new_s[illegal_chars.span()[0]]}")
+            s_object = env['states_dict'][s]
+            s_object.state_name = new_s
+            env['states_dict'].pop(s)
+            env['states_dict'].update({new_s : s_object})
+
+        if command.timer and single_command(command.timer):
+            command_args = command.timer[0]
+            decision = command_args[0].upper()
+            if decision == "ON":
+                env['disp_time'] = True 
+            elif decision == "OFF":
+                env['disp_time'] = False
+            else:
+                raise ArgumentParserError(f"incorrect option for timer: {decision}")
 
         if command.list:
             print(f"states: {list(env['states_dict'].keys())}")
@@ -296,77 +279,60 @@ def execute_commands(parser, commands, env):
         if command.help:
             print(help_message)
 
-        if command.if_then:
-            if len(command.if_then) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
+        if command.if_then and single_command(command.if_then):
+            command_args = command.if_then[0]
+            if_condition = command_args[0][1:len(command_args[0])-1]
+            then_statements = command_args[1][1:len(command_args[1])-1]
+            execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
+            if execute_then_statements == True:
+                commands = get_commands(parser, then_statements)
+                env = execute_commands(parser, commands, env)
+
+        if command.if_then_else and single_command(command.if_then_else):
+            command_args = command.if_then_else[0]
+            if_condition = command_args[0][1:len(command_args[0])-1]
+            then_statements = command_args[1][1:len(command_args[1])-1]
+            else_statements = command_args[2][1:len(command_args[2])-1]
+            execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
+            if execute_then_statements == True:
+                commands = get_commands(parser, then_statements)
+                env = execute_commands(parser, commands, env)
+            elif execute_then_statements == False:
+                commands = get_commands(parser, else_statements)
+                env = execute_commands(parser, commands, env)
+
+        if command.for_each and single_command(command.for_each):
+            command_args = command.for_each[0]
+            i_arg = command_args[0]
+            iterable_arg = command_args[1]
+            statements = command_args[2]
+            iterable_arg = iterable_arg[1:len(iterable_arg)-1].split(',')
+            iterable_arg = [int(x) for x in iterable_arg]
+            if iterable_arg[0] <= iterable_arg[1]:
+                iterable_arg[1] += 1
             else:
-                command_args = command.if_then[0]
-                if_condition = command_args[0][1:len(command_args[0])-1]
-                then_statements = command_args[1][1:len(command_args[1])-1]
-                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
-                if execute_then_statements == True:
-                    # Parse the current statement(s) and return command(s) that can be acted on
-                    commands = get_commands(parser, then_statements)
-                    # Execute the current command(s), and return env
+                iterable_arg[1] -= 1
+            iterable = range(*tuple(iterable_arg))
+            # iterate a number of times as specified by user
+            for i in iterable:
+                statements_i = statements.replace(f' {i_arg}}}', f' {i} ')
+                statements_i = statements.replace(f' {i_arg} ', f' {i} ')
+                statements_i = statements_i[1:len(command_args[2])-1]
+                commands = get_commands(parser, statements_i)
+                # Execute the current command(s), and return env
+                env = execute_commands(parser, commands, env)
+
+        if command.execute and single_command(command.execute):
+            command_args = command.execute[0]
+            file_name = command_args[0]
+            try:
+                with open(f"{file_name}.clqc", 'r') as file:
+                    script = file.read()
+                    commands = get_commands(parser, script)
                     env = execute_commands(parser, commands, env)
+            except FileNotFoundError:
+                raise ArgumentParserError(f"file not found: {file_name}")
 
-        if command.if_then_else:
-            if len(command.if_then_else) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.if_then_else[0]
-                if_condition = command_args[0][1:len(command_args[0])-1]
-                then_statements = command_args[1][1:len(command_args[1])-1]
-                else_statements = command_args[2][1:len(command_args[2])-1]
-                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
-
-                if execute_then_statements == True:
-                    # Parse the current statement(s) and return command(s) that can be acted on
-                    commands = get_commands(parser, then_statements)
-                    # Execute the current command(s), and return env
-                    env = execute_commands(parser, commands, env)
-                elif execute_then_statements == False:
-                    # Parse the current statement(s) and return command(s) that can be acted on
-                    commands = get_commands(parser, else_statements)
-                    # Execute the current command(s), and return env
-                    env = execute_commands(parser, commands, env)
-                else: 
-                    pass
-
-        if command.for_each:
-            if len(command.for_each) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.for_each[0]
-                # To do: (attempt) implementing substitution of i_arg into commands
-                i_arg = command_args[0]
-                iterable_arg = command_args[1]
-                statements = command_args[2][1:len(command_args[2])-1]
-                # iterable = eval(iterable_arg) # Just no
-                iterable = range(int(iterable_arg))
-                # Parse the current statement(s) and return command(s) that can be acted on
-                commands = get_commands(parser, statements)
-                # iterate a number of times as specified by user
-                for i in iterable:
-                        # Execute the current command(s), and return env
-                        env = execute_commands(parser, commands, env)
-
-        if command.execute:
-            if len(command.execute) != 1:
-                raise ArgumentParserError(error_message['too many commands'])
-            else:
-                command_args = command.execute[0]
-                file_name = command_args[0]
-                try:
-                    with open(f"{file_name}.clqc", 'r') as file:
-                        script = file.read()
-                        # Parse the current statement(s) and return command(s) that can be acted on
-                        commands = get_commands(parser, script)
-                        # Execute the current command(s), and return env
-                        env = execute_commands(parser, commands, env)
-                except FileNotFoundError:
-                    raise ArgumentParserError(f"file not found: {file_name}")
-                
     return env
 
 def main():
@@ -418,20 +384,4 @@ def main():
     quit()
 
 if __name__ == '__main__':
-    main()  
-
-# To fix:
-# Welcome to my terminal-based quantum computing simulator. 
-# Enter --help or -h for more information. To quit the program, enter --quit or -q.
-
-# #~: --new q | uisdiusf
-# ERROR: unrecognized arguments: uisdiusf
-# #~: -l
-# states: []
-# variables: []
-# #~: --new q | --apply J q 1
-# ERROR: gate not found: J
-# #~: -l
-# states: ['q']
-# variables: []
-# #~:
+    main()
