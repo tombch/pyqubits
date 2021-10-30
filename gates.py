@@ -1,6 +1,9 @@
 import numpy as np
 import random
 
+class GateError(Exception):
+    pass
+
 zero_matrix = np.array([[1+0j, 0+0j], [0+0j, 0+0j]])
 one_matrix = np.array([[0+0j, 0+0j], [0+0j, 1+0j]])
 I_matrix = np.array([[1+0j, 0+0j], [0+0j, 1+0j]])
@@ -89,7 +92,7 @@ def apply_cgate(s, control, target, chosen_matrix, gate_char):
                     new_wire += "|"+gap*s.w
             s.update_circuit(new_wire)
     else:
-        print("error: control qubit and target qubit cannot be the same")
+        raise GateError(f"{s.state_name}: controlled gate with control={control}, target={target}: control and target cannot be the same")
 
 def X(s, qubit):
     apply_gate(s, qubit, X_matrix, "X")

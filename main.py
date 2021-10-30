@@ -69,6 +69,16 @@ def get_commands(parser, statements):
         command_args = regroup(split_statement, "{", "}", split_char=" ")
         command_args = regroup(command_args, "[", "]", split_char=" ")
         command_args = regroup(command_args, "(", ")", split_char=" ")
+        command_args = regroup(command_args, "<", ">", split_char=" ")
+        for i in range(len(command_args)):
+            logic_strings = re.findall('<.*?>', command_args[i])
+            for x in logic_strings:
+                try:
+                    evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
+                except logic_evaluator.LogicEvaluatorError as msg:
+                    raise ArgumentParserError(msg)         
+                if evaluated_x != None and not(isinstance(evaluated_x, str)):    
+                    command_args[i] = command_args[i].replace(x, str(evaluated_x))
         command = parser.parse_args(command_args)
         commands.append(command)
     return commands
@@ -90,6 +100,14 @@ def execute_commands(parser, commands, env):
             num_qubits = 1
             preset_state = None
             for s in command_args:
+                if s in env['states_dict']:
+                    del env['states_dict'][s]
+                    vars_to_delete = []
+                    for v in env['vars_dict']:
+                        if v.startswith(f'{s}.'):
+                            vars_to_delete.append(v)
+                    for v in vars_to_delete:
+                        del env['vars_dict'][v]
                 illegal_chars = re.search("[^0-9a-zA-Z]", s)
                 if s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
                     if s.startswith(num_qubits_tag[0]): 
@@ -117,13 +135,15 @@ def execute_commands(parser, commands, env):
             for s in command_args:
                 if s.startswith(name_tag):
                     joint_state_name = s[len(name_tag):]
-                elif s in env['states_dict']:
+                elif s in env['states_dict'] and s not in states_to_pop:
                     states_being_joined.append(env['states_dict'][s])
                     states_to_pop.append(s)
+                elif s in states_to_pop:
+                    raise ArgumentParserError(f"attempted joining of state {s} with itself")  
                 else:
                     raise ArgumentParserError(f"invalid parameter assignment or state that doesn't exist: {s}")
             for s in states_to_pop:
-                env['states_dict'].pop(s)                               
+                env['states_dict'].pop(s)                                 
             joint_state = functools.reduce(QuantumState.__mul__, states_being_joined)
             if joint_state_name:
                 joint_state.state_name = joint_state_name
@@ -193,7 +213,10 @@ def execute_commands(parser, commands, env):
                     else: 
                         for q in qs:
                             qs_list.append(q)
-                    gate_func(s, *qs_list)
+                    try: 
+                        gate_func(s, *qs_list)
+                    except gates.GateError as msg:
+                        raise ArgumentParserError(msg)
             command_args = command.apply[0]
             gate_name = command_args[0]
             s = command_args[1]
@@ -212,17 +235,9 @@ def execute_commands(parser, commands, env):
                 raise ArgumentParserError(f"{error_message['gate not found']}: {gate_name}")             
 
         if command.measure and single_command(command.measure):
-            make_vars_tag = ['vars', 'variables']
             command_args = command.measure[0]
             s = command_args[0]
-            args = command_args[1:]
-            qubit_refs = []
-            make_vars = False
-            for a in args:
-                if a.startswith(make_vars_tag[0]) or a.startswith(make_vars_tag[1]):
-                    make_vars = True
-                else:
-                    qubit_refs.append(a)
+            qubit_refs = command_args[1:]
             if s not in env['states_dict']:
                 raise ArgumentParserError(f"{error_message['state not found']}: {s}")
             else:
@@ -242,8 +257,11 @@ def execute_commands(parser, commands, env):
                     final_qubits.append(q)
             for q in final_qubits:
                 bit = s.measurement(int(q))
-                if make_vars:
-                    env['vars_dict'][f"{s.state_name}.{q}"] = bit
+                measurement_number = 1
+                for v in env['vars_dict']:
+                    if v.startswith(f'{s}.{q}.m'):
+                        measurement_number += 1 
+                env['vars_dict'][f"{s.state_name}.{q}.m{measurement_number}"] = bit
 
         if command.rename and single_command(command.rename):
             command_args = command.rename[0]
@@ -283,23 +301,29 @@ def execute_commands(parser, commands, env):
             command_args = command.if_then[0]
             if_condition = command_args[0][1:len(command_args[0])-1]
             then_statements = command_args[1][1:len(command_args[1])-1]
-            execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
-            if execute_then_statements == True:
-                commands = get_commands(parser, then_statements)
-                env = execute_commands(parser, commands, env)
+            try:          
+                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
+                if execute_then_statements == True:
+                    commands = get_commands(parser, then_statements)
+                    env = execute_commands(parser, commands, env)
+            except logic_evaluator.LogicEvaluatorError as msg:
+                raise ArgumentParserError(msg)
 
         if command.if_then_else and single_command(command.if_then_else):
             command_args = command.if_then_else[0]
             if_condition = command_args[0][1:len(command_args[0])-1]
             then_statements = command_args[1][1:len(command_args[1])-1]
             else_statements = command_args[2][1:len(command_args[2])-1]
-            execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
-            if execute_then_statements == True:
-                commands = get_commands(parser, then_statements)
-                env = execute_commands(parser, commands, env)
-            elif execute_then_statements == False:
-                commands = get_commands(parser, else_statements)
-                env = execute_commands(parser, commands, env)
+            try:          
+                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
+                if execute_then_statements == True:
+                    commands = get_commands(parser, then_statements)
+                    env = execute_commands(parser, commands, env)
+                elif execute_then_statements == False:
+                    commands = get_commands(parser, else_statements)
+                    env = execute_commands(parser, commands, env)
+            except logic_evaluator.LogicEvaluatorError as msg:
+                raise ArgumentParserError(msg)
 
         if command.for_each and single_command(command.for_each):
             command_args = command.for_each[0]
@@ -314,10 +338,13 @@ def execute_commands(parser, commands, env):
                 iterable_arg[1] -= 1
             iterable = range(*tuple(iterable_arg))
             # iterate a number of times as specified by user
-            for i in iterable:
-                statements_i = statements.replace(f' {i_arg}}}', f' {i}}}')
-                statements_i = statements.replace(f' {i_arg} ', f' {i} ')
-                statements_i = statements_i[1:len(command_args[2])-1]
+            for i in iterable:       
+                statements_i = statements
+                need_spaces = re.findall('[^a-zA-Z]i[^a-zA-Z]?', statements_i)
+                for pattern in need_spaces:
+                    replacement = pattern.replace(i_arg, str(i))
+                    statements_i = statements_i.replace(pattern, replacement)
+                statements_i = statements_i[1:len(statements_i)-1]
                 commands = get_commands(parser, statements_i)
                 # Execute the current command(s), and return env
                 env = execute_commands(parser, commands, env)
@@ -332,6 +359,61 @@ def execute_commands(parser, commands, env):
                     env = execute_commands(parser, commands, env)
             except FileNotFoundError:
                 raise ArgumentParserError(f"file not found: {file_name}")
+        
+        if command.delete and single_command(command.delete):
+            command_args = command.delete[0]
+            delete_type = command_args[len(command_args)-1]
+            objects_to_delete = command_args[0:len(command_args)-1]
+            if delete_type == "state" or delete_type == "states":
+                if len(objects_to_delete) == 0:
+                    objects_to_delete = list(env['states_dict'].keys())
+                    for s in objects_to_delete:
+                        del env['states_dict'][s]
+                else:
+                    for s in objects_to_delete:
+                        if s not in env['states_dict']:
+                            raise ArgumentParserError(f"{error_message['state not found']}: {s}")
+                        else:
+                            del env['states_dict'][s]
+            elif delete_type == "var" or delete_type == "vars":
+                if len(objects_to_delete) == 0:
+                    objects_to_delete = list(env['vars_dict'].keys())
+                    for v in objects_to_delete:
+                        del env['vars_dict'][v]
+                else:
+                    for s in objects_to_delete:
+                        vars_to_delete = []
+                        for v in env['vars_dict']:
+                            if v.startswith(f'{s}.'):
+                                vars_to_delete.append(v)
+                        for v in vars_to_delete:
+                            del env['vars_dict'][v]
+            else: 
+                raise ArgumentParserError(f"must specify deletion with either state / states or var / vars") 
+
+        if command.keep and single_command(command.keep):
+            command_args = command.keep[0]
+            keep_type = command_args[len(command_args)-1]
+            objects_to_keep = command_args[0:len(command_args)-1]           
+            if keep_type == "state" or keep_type == "states":
+                states_to_delete = []
+                for s in env['states_dict']:
+                    if s not in objects_to_keep:
+                        states_to_delete.append(s)
+                for s in states_to_delete:
+                    del env['states_dict'][s]
+            elif keep_type == "var" or keep_type == "vars":
+                vars_to_delete = []
+                for s in objects_to_keep:
+                    for v in env['vars_dict']:
+                        if v.startswith(f'{s}.'):
+                            pass
+                        else:
+                            vars_to_delete.append(v)
+                for v in vars_to_delete:
+                    del env['vars_dict'][v]
+            else: 
+                raise ArgumentParserError(f"must specify deletion with either state / states or var / vars") 
 
     return env
 
@@ -355,6 +437,8 @@ def main():
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
     g.add_argument('-f-e', '--for-each', nargs=3, action='append')
     g.add_argument('-e', '--execute', nargs=1, action='append')
+    g.add_argument('-d', '--delete', nargs='+', action='append')
+    g.add_argument('-k', '--keep', nargs='+', action='append')
     env = {}
     env['states_dict'] = {}
     env['vars_dict'] = {}

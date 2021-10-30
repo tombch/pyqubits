@@ -13,6 +13,10 @@ symbol = {
     'gt' : '>',
     'leq' : '<=',
     'geq' : '>=',
+    'add' : '+',
+    'subtract' : '-',
+    'multiply' : '*',
+    'divide' : '//',
     'True' : 'T',
     'False' : 'F' 
 }
@@ -27,8 +31,27 @@ env = {
     symbol['gt'] : operator.__gt__,
     symbol['leq'] : operator.__le__,
     symbol['geq'] : operator.__ge__,
+    symbol['add'] : operator.__add__,
+    symbol['subtract'] : operator.__sub__,
+    symbol['multiply'] : operator.__mul__,
+    symbol['divide'] : operator.__truediv__,
     symbol['True'] : True,
     symbol['False'] : False
+}
+
+two_arg_operators = {
+    symbol['and'] : operator.__and__,
+    symbol['or'] : operator.__or__,
+    symbol['eq'] : operator.__eq__,
+    symbol['ne'] : operator.__ne__,
+    symbol['lt'] : operator.__lt__,
+    symbol['gt'] : operator.__gt__,
+    symbol['leq'] : operator.__le__,
+    symbol['geq'] : operator.__ge__,
+    symbol['add'] : operator.__add__,
+    symbol['subtract'] : operator.__sub__,
+    symbol['multiply'] : operator.__mul__,
+    symbol['divide'] : operator.__truediv__,    
 }
 
 def get_tokens(user_input):
@@ -62,51 +85,45 @@ def get_expression(tokens):
                     try:
                         expression.append(int(tokens[i]))
                     except ValueError:
-                        raise LogicEvaluatorError(f'unrecognised or incomparable object: {tokens[i]}')
+                        try: 
+                            expression.append(float(tokens[i]))
+                        except ValueError:
+                            expression.append(str(tokens[i]))
                 i += 1                
             else:
                 i += 1
                 break
     return expression, i
 
-def evaluate(expr):
-    if isinstance(expr, bool):
-        return expr
-    elif isinstance(expr, int):
-        return expr
-    elif isinstance(expr, list):
-        if (env[symbol['and']] in expr) and len(expr) == 3:
-            return env[symbol['and']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['or']] in expr) and len(expr) == 3:
-            return env[symbol['or']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['not']] in expr) and len(expr) == 2:
-            return env[symbol['not']](evaluate(expr[1]))
-        elif (env[symbol['eq']] in expr) and len(expr) == 3:
-            return env[symbol['eq']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['ne']] in expr) and len(expr) == 3:
-            return env[symbol['ne']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['lt']] in expr) and len(expr) == 3:
-            return env[symbol['lt']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['gt']] in expr) and len(expr) == 3:
-            return env[symbol['gt']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['leq']] in expr) and len(expr) == 3:
-            return env[symbol['leq']](evaluate(expr[0]), evaluate(expr[2]))
-        elif (env[symbol['geq']] in expr) and len(expr) == 3:
-            return env[symbol['geq']](evaluate(expr[0]), evaluate(expr[2]))
-        elif len(expr) == 1:
-            return evaluate(expr[0]) 
+def evaluate(expr, accept_type_errors=False):
+    try:
+        if isinstance(expr, bool) or isinstance(expr, int) or isinstance(expr, float) or isinstance(expr, str):
+            return expr
+        elif isinstance(expr, list):
+            if len(expr) == 1:
+                return evaluate(expr[0])
+            elif len(expr) == 2:
+                if expr[0] == operator.__not__:
+                    return operator.__not__(evaluate(expr[1]))
+                elif expr[0] == operator.__sub__:
+                    # edge case where __sub__ has to be replaced with __neg__
+                    return operator.__neg__(evaluate(expr[1]))
+            elif len(expr) == 3:
+                for k in two_arg_operators.keys():
+                    if expr[1] == two_arg_operators[k]:
+                        return two_arg_operators[k](evaluate(expr[0]), evaluate(expr[2]))    
+    except TypeError:
+        if not accept_type_errors:
+            raise LogicEvaluatorError('types cannot be compared')
         else:
-            raise LogicEvaluatorError('incorrect syntax')
+            return None
+    raise LogicEvaluatorError('incorrect syntax')
 
-def interpret(user_input, user_env=None):
+def interpret(user_input, user_env=None, accept_type_errors=False):
     if user_env is not None:
         env.update(user_env)
-    try:
-        condition = evaluate(get_expression(get_tokens(user_input))[0])
-        return condition
-    except LogicEvaluatorError as msg:
-        print(f'logic error: {msg}')
-        return None
+    condition = evaluate(get_expression(get_tokens(user_input))[0], accept_type_errors)
+    return condition
 
 def main():
     while True:

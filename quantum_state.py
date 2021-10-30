@@ -128,23 +128,21 @@ class QuantumState:
         gap = " "
         for i in range(0, self.num_qubits):
             if (i+1) == qubit: 
-                gap = "="
-                new_wire += "M"+gap*QuantumState.w
+                new_wire += f"M={bit}"+gap
             else:
                 new_wire += "|"+gap*QuantumState.w
-        new_wire += str(bit)
         self.update_circuit(new_wire)
         return bit
     
     def print_state(self):
         # trying out generators
         gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))
-        state_string = f"{self.state_name} = "
+        state_string = f" {self.state_name} = "
         for x in gen_classical_states:
             current_amplitude = round(self.state_vector[x[0]].real, QuantumState.dp) + round(self.state_vector[x[0]].imag, QuantumState.dp) * 1j
             if current_amplitude != 0:
                 current_amplitude_string = str(current_amplitude)
-                state_string += f"{current_amplitude_string} |{x[1]}>\n"
+                state_string += f"{ current_amplitude_string} |{x[1]}>\n"
         newline_count = state_string.count("\n")
         state_string = state_string.replace("\n", f"\n{' ' * len(self.state_name)} + ", newline_count-1)
         print(f"State vector for {self.state_name} [{self.num_actions}]:\n{state_string[:len(state_string)-1]}")
