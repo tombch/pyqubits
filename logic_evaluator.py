@@ -3,62 +3,32 @@ import operator
 class LogicEvaluatorError(Exception):
     pass
 
-symbol = {
-    'and' : '/\\',
-    'or' : '\\/',
-    'not' : '^',
-    'eq' : '==',
-    'ne' : '!=',
-    'lt' : '<',
-    'gt' : '>',
-    'leq' : '<=',
-    'geq' : '>=',
-    'add' : '+',
-    'subtract' : '-',
-    'multiply' : '*',
-    'divide' : '//',
-    'True' : 'T',
-    'False' : 'F' 
-}
-
 env = {
-    symbol['and'] : operator.__and__,
-    symbol['or'] : operator.__or__,
-    symbol['not'] : operator.__not__,
-    symbol['eq'] : operator.__eq__,
-    symbol['ne'] : operator.__ne__,
-    symbol['lt'] : operator.__lt__,
-    symbol['gt'] : operator.__gt__,
-    symbol['leq'] : operator.__le__,
-    symbol['geq'] : operator.__ge__,
-    symbol['add'] : operator.__add__,
-    symbol['subtract'] : operator.__sub__,
-    symbol['multiply'] : operator.__mul__,
-    symbol['divide'] : operator.__truediv__,
-    symbol['True'] : True,
-    symbol['False'] : False
-}
-
-two_arg_operators = {
-    symbol['and'] : operator.__and__,
-    symbol['or'] : operator.__or__,
-    symbol['eq'] : operator.__eq__,
-    symbol['ne'] : operator.__ne__,
-    symbol['lt'] : operator.__lt__,
-    symbol['gt'] : operator.__gt__,
-    symbol['leq'] : operator.__le__,
-    symbol['geq'] : operator.__ge__,
-    symbol['add'] : operator.__add__,
-    symbol['subtract'] : operator.__sub__,
-    symbol['multiply'] : operator.__mul__,
-    symbol['divide'] : operator.__truediv__,    
+    'and' : {'symbol' : '/\\', 'value': operator.__and__, 'nargs' : 2},
+    'or' : {'symbol' : '\\/', 'value' : operator.__or__, 'nargs' : 2},
+    'eq' : {'symbol' : '==', 'value' : operator.__eq__, 'nargs' : 2},
+    'ne' : {'symbol' : '!=', 'value' : operator.__ne__, 'nargs' : 2},
+    'lt' : {'symbol' : '<', 'value' : operator.__lt__, 'nargs' : 2},
+    'gt' : {'symbol' : '>', 'value' : operator.__gt__, 'nargs' : 2},
+    'leq' : {'symbol' : '<=', 'value' : operator.__le__, 'nargs' : 2},
+    'geq' : {'symbol' : '>=', 'value' : operator.__ge__, 'nargs' : 2},
+    'add' : {'symbol' : '+', 'value' : operator.__add__, 'nargs' : 2},
+    'subtract' : {'symbol' : '-', 'value' : operator.__sub__, 'nargs' : 2},
+    'multiply' : {'symbol' : '*', 'value' : operator.__mul__, 'nargs' : 2},
+    'divide' : {'symbol' : '//', 'value' : operator.__truediv__, 'nargs' : 2},
+    'power' : {'symbol' : '^', 'value' : operator.__pow__, 'nargs' : 2},
+    'not' : {'symbol' : '~', 'value' : operator.__not__, 'nargs' : 1},
+    'neg' : {'symbol' : '-', 'value' : operator.__neg__, 'nargs' : 1},
+    'T' : {'symbol' : 'T', 'value' : True, 'nargs' : 0},
+    'F' : {'symbol' : 'F', 'value' : False, 'nargs' : 0},
 }
 
 def get_tokens(user_input):
     if user_input.count('(') != user_input.count(')'):
         raise LogicEvaluatorError('incorrect syntax')
-    for k in symbol.keys():
-        user_input = user_input.replace(symbol[k], f" {symbol[k]} ")        
+    user_input = user_input.replace(' ', '')
+    for k in env.keys():
+        user_input = user_input.replace(env[k]['symbol'], f" {env[k]['symbol']} ")        
     user_input = user_input.replace('(', ' ( ')
     user_input = user_input.replace(')', ' ) ')
     tokens = user_input.split()
@@ -79,16 +49,23 @@ def get_expression(tokens):
                 i += sub_i + 1
                 expression.append(sub_expression)
             elif tokens[i] != ')':
-                if tokens[i] in env:
-                    expression.append(env[tokens[i]])
-                else:
+                in_env = False
+                for k in env.keys():
+                    if tokens[i] == env[k]['symbol']:
+                        expression.append(tokens[i])
+                        in_env = True
+                        break
+                if not in_env:
                     try:
-                        expression.append(int(tokens[i]))
+                        env[tokens[i]] = {'symbol' : tokens[i], 'value' : int(tokens[i]), 'nargs' : 0}
+                        expression.append(tokens[i])
                     except ValueError:
                         try: 
-                            expression.append(float(tokens[i]))
+                            env[tokens[i]] = {'symbol' : tokens[i], 'value' : float(tokens[i]), 'nargs' : 0}
+                            expression.append(tokens[i])
                         except ValueError:
-                            expression.append(str(tokens[i]))
+                            env[tokens[i]] = {'symbol' : tokens[i], 'value' : str(tokens[i]), 'nargs' : 0}
+                            expression.append(tokens[i])
                 i += 1                
             else:
                 i += 1
@@ -97,27 +74,27 @@ def get_expression(tokens):
 
 def evaluate(expr, accept_type_errors=False):
     try:
-        if isinstance(expr, bool) or isinstance(expr, int) or isinstance(expr, float) or isinstance(expr, str):
-            return expr
-        elif isinstance(expr, list):
+        if not isinstance(expr, list):
+            for k in env.keys():
+                if expr == env[k]['symbol']:
+                    return env[k]['value']
+        else:
             if len(expr) == 1:
                 return evaluate(expr[0])
             elif len(expr) == 2:
-                if expr[0] == operator.__not__:
-                    return operator.__not__(evaluate(expr[1]))
-                elif expr[0] == operator.__sub__:
-                    # edge case where __sub__ has to be replaced with __neg__
-                    return operator.__neg__(evaluate(expr[1]))
+                for k in env.keys():
+                    if expr[0] == env[k]['symbol'] and env[k]['nargs'] == 1:
+                        return env[k]['value'](evaluate(expr[1]))
             elif len(expr) == 3:
-                for k in two_arg_operators.keys():
-                    if expr[1] == two_arg_operators[k]:
-                        return two_arg_operators[k](evaluate(expr[0]), evaluate(expr[2]))    
-    except TypeError:
+                for k in env.keys():
+                    if expr[1] == env[k]['symbol'] and env[k]['nargs'] == 2:
+                        return env[k]['value'](evaluate(expr[0]), evaluate(expr[2]))    
+    except TypeError as e:
         if not accept_type_errors:
-            raise LogicEvaluatorError('types cannot be compared')
+            raise LogicEvaluatorError('Attempted impossible comparison')
         else:
             return None
-    raise LogicEvaluatorError('incorrect syntax')
+    raise LogicEvaluatorError('Incorrect syntax')
 
 def interpret(user_input, user_env=None, accept_type_errors=False):
     if user_env is not None:
@@ -131,7 +108,7 @@ def main():
             user_input = input('> ')
             print(interpret(user_input))
         except LogicEvaluatorError as msg:
-            print(f"error: {msg}")
+            print(f"LogicEvaluatorError: {msg}")
 
 if __name__ == '__main__':
     main()
