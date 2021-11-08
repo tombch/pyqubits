@@ -2,6 +2,26 @@ import numpy as np
 import random
 from gates import *
 
+def kron_with_zero_matrix(matrix):
+    return np.zeros((2*matrix.shape[0], 2*matrix.shape[1]))
+    matrix = np.insert(matrix, [x+1 for x in range(matrix.shape[1])], 0, axis=0)
+    matrix = np.insert(matrix, [x+1 for x in range(matrix.shape[0])], 0, axis=1)
+    return matrix
+
+def kron_with_one_matrix(matrix):
+    return np.zeros((2*matrix.shape[0], 2*matrix.shape[1]))
+    matrix = np.insert(matrix, [x for x in range(matrix.shape[1])], 0, axis=0)
+    matrix = np.insert(matrix, [x for x in range(matrix.shape[0])], 0, axis=1)
+    return matrix
+
+def kron_with_identity_matrix(matrix):
+    return np.zeros((2*matrix.shape[0], 2*matrix.shape[1]))
+    matrix1 = np.insert(matrix, [x+1 for x in range(matrix.shape[1])], 0, axis=0)
+    matrix1 = np.insert(matrix1, [x+1 for x in range(matrix.shape[0])], 0, axis=1)
+    matrix2 = np.insert(matrix, [x for x in range(matrix.shape[1])], 0, axis=0)
+    matrix2 = np.insert(matrix2, [x for x in range(matrix.shape[0])], 0, axis=1)    
+    return np.add(matrix1, matrix2)
+
 # Class for creating, displaying and measuring quantum states
 class QuantumState:
     __slots__ = 'num_qubits', 'num_classical_states', 'state_name', 'state_vector', 'num_actions', 'circuit'
@@ -105,9 +125,13 @@ class QuantumState:
             if (i == qubit):
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, zero_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, one_matrix)
+                # measurement_matrix_zero = kron_with_zero_matrix(measurement_matrix_zero)
+                # measurement_matrix_one = kron_with_one_matrix(measurement_matrix_one)
             else:
                 measurement_matrix_zero = np.kron(measurement_matrix_zero, I_matrix)
                 measurement_matrix_one = np.kron(measurement_matrix_one, I_matrix)
+                # measurement_matrix_zero = kron_with_identity_matrix(measurement_matrix_zero)
+                # measurement_matrix_one = kron_with_identity_matrix(measurement_matrix_one)
         collapsed_zero = measurement_matrix_zero @ self.state_vector
         collapsed_one = measurement_matrix_one @ self.state_vector
         zero_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_zero.conjugate().transpose() @ collapsed_zero

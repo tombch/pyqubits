@@ -1,10 +1,10 @@
 import gates
-from quantum_state import QuantumState
+import quantum_state
 
 # Example quantum algorithms
 def entanglement():
     print("===ENTANGLEMENT===")
-    s = quantum_state.QuantumState(num_qubits=2, preset_state="zero_state", state_name="s")
+    s = quantum_state.QuantumState(num_qubits=2, preset_state='zero', state_name="s")
     s.print_state()
     gates.H(s, qubit=1)
     s.print_state()
@@ -17,8 +17,8 @@ def entanglement():
 def quantum_teleportation():
     print("===QUANTUM TELEPORTATION===")
     v = quantum_state.QuantumState(state_name="v")    
-    b1 = quantum_state.QuantumState(preset_state="zero_state", state_name="b1")
-    b2 = quantum_state.QuantumState(preset_state="zero_state", state_name="b2")  
+    b1 = quantum_state.QuantumState(preset_state='zero', state_name="b1")
+    b2 = quantum_state.QuantumState(preset_state='zero', state_name="b2")  
     v.print_state()
     b1.print_state()
     b2.print_state()
@@ -38,41 +38,30 @@ def quantum_teleportation():
     vxb1xb2.print_state()
     vxb1xb2.print_circuit()
 
-# command line version of quantum teleportation: 
-# -t on | 
-# -n q | 
-# -n b ps=state0 nq=2 | 
-# -j q b name=qb | 
-# -s qb | 
-# -a H qb 2 | 
-# -a CNOT qb [2, 3] | 
-# -a CNOT qb [1, 2] | 
-# -a H qb 1 | 
-# -m qb 1 2 mv | 
-# -i-t {qb.2 == 1} {-a X qb 3} | 
-# -i-t {qb.1 == 1} {-a Z qb 3} | 
-# -c qb | 
-# -s qb
-# -t on | -n q | -n b ps=state0 nq=2 | -j q b name=qb | -s qb | -a H qb 2 | -a CNOT qb [2, 3] | -a CNOT qb [1,2] | -a H qb 1 | -m qb 1 2 mv | -i-t {qb.2 == 1} {-a X qb 3} | -i-t {qb.1 == 1} {-a Z qb 3} | -c qb | -s qb
-
-# alternative:
-# --timer on | --new q | --new bellstate num_qubits=2 state=zero | --apply H bellstate 1 | --apply CNOT bellstate [1,2] | --state q bellstate | --join q bellstate name=qb | --apply CNOT qb [1,2] | --apply H qb 1 | --measure qb 1 2 mv | --if-then {qb.2 == 1} {--apply X qb 3} | --if-then {qb.1 == 1} {--apply Z qb 3} | --circuit qb | --state qb
-
 def deutsch_algorithm():
     print("===DEUTSCH'S ALGORITHM===")
-    q1 = quantum_state.QuantumState(preset_state="zero_state", state_name="q1")
-    q2 = quantum_state.QuantumState(preset_state="one_state", state_name="q2")
-    q1xq2 = q1 * q2
-    q1xq2.print_state()
-    gates.H(q1xq2, qubit=1)
-    gates.H(q1xq2, qubit=2)
-    gates.Uf2(q1xq2, f_choice=1)
-    gates.H(q1xq2, qubit=1)
-    q1xq2.print_state()
-    f0_xor_f1 = q1xq2.measurement(qubit=1)
-    q1xq2.print_state()
-    q1xq2.print_circuit()
+    q1 = quantum_state.QuantumState(preset_state='zero', state_name="q1")
+    q2 = quantum_state.QuantumState(preset_state='one', state_name="q2")
+    q3 = quantum_state.QuantumState(preset_state='zero', state_name="q3")
+    q1xq2xq3 = q1 * q2 * q3
+    q1xq2xq3.print_state()
+    gates.H(q1xq2xq3, qubit=2)
+    gates.H(q1xq2xq3, qubit=3)
+    gates.Uf2(q1xq2xq3, f_choice=1, qubit1=2, qubit2=3)
+    gates.H(q1xq2xq3, qubit=2)
+    q1xq2xq3.print_state()
+    f0_xor_f1 = q1xq2xq3.measurement(qubit=2)
+    q1xq2xq3.print_state()
+    q1xq2xq3.print_circuit()
     if f0_xor_f1 == 0:
         print("f is constant")
     elif f0_xor_f1 == 1:
         print("f is balanced")
+    
+def main():
+    entanglement()
+    quantum_teleportation()
+    deutsch_algorithm()
+    
+if __name__ == '__main__':
+    main()

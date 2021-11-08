@@ -8,14 +8,15 @@ import copy
 import cProfile, pstats, io
 import logic_evaluator
 import gates
+import qcommands
 from quantum_state import QuantumState
 from messages import help_message, error_message
 
-
 class ArgumentParserError(Exception):
-    __slots = 'message'
-    def __init__(self, message):
+    __slots = 'message', 'error_class'
+    def __init__(self, message, error_class=None):
         self.message = message
+        self.error_class = error_class
 
 class ThrowingArgumentParser(argparse.ArgumentParser):
     def error(self, message):
@@ -60,7 +61,13 @@ def get_commands(parser, statements):
     statements = statements.replace("}", " } ")
     statements = statements.replace("[", " [ ")
     statements = statements.replace("]", " ] ")
+    statements = statements.replace("(", " ( ")
+    statements = statements.replace(")", " ) ")
+    # statements = statements.replace("<", " < ")
+    # statements = statements.replace(">", " > ")
     statements = statements.split(';')
+    # After splitting on ; we need to regroup any split subcommands
+    # These subcommands are contained within { }
     statements = regroup(statements, "{", "}", split_char=";")
     commands = []
     for statement in statements:
@@ -77,13 +84,13 @@ def get_commands(parser, statements):
                     evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
                 except logic_evaluator.LogicEvaluatorError as msg:
                     raise ArgumentParserError(msg)         
-                if evaluated_x != None and not(isinstance(evaluated_x, str)):    
+                if evaluated_x != None and not isinstance(evaluated_x, str):
                     command_args[i] = command_args[i].replace(x, str(evaluated_x))
         command = parser.parse_args(command_args)
         commands.append(command)
     return commands
 
-def single_command(command_obj):
+def is_single_command(command_obj):
     if len(command_obj) != 1:
         raise ArgumentParserError(error_message['too many commands'])
     else:
@@ -92,200 +99,95 @@ def single_command(command_obj):
 def execute_commands(parser, commands, env):
     env = copy.deepcopy(env)
     for command in commands:
-        if command.new and single_command(command.new):
-            num_qubits_tag = ['nq=', 'qubits=']
-            preset_state_tag = ['s=', 'state=']
-            command_args = command.new[0]
-            new_states = []
-            num_qubits = 1
-            preset_state = None
-            for s in command_args:
-                if s in env['states_dict']:
-                    del env['states_dict'][s]
-                    vars_to_delete = []
-                    for v in env['vars_dict']:
-                        if v.startswith(f'{s}.'):
-                            vars_to_delete.append(v)
-                    for v in vars_to_delete:
-                        del env['vars_dict'][v]
-                illegal_chars = re.search("[^0-9a-zA-Z]", s)
-                if s.startswith(num_qubits_tag[0]) or s.startswith(num_qubits_tag[1]):
-                    if s.startswith(num_qubits_tag[0]): 
-                        num_qubits = int(s[len(num_qubits_tag[0]):])
-                    else:
-                        num_qubits = int(s[len(num_qubits_tag[1]):])
-                elif s.startswith(preset_state_tag[0]) or s.startswith(preset_state_tag[1]):
-                    if s.startswith(preset_state_tag[0]):
-                        preset_state = str(s[len(preset_state_tag[0]):])
-                    else:
-                        preset_state = str(s[len(preset_state_tag[1]):])
-                elif illegal_chars:
-                    raise ArgumentParserError(f"invalid character(s) in state name: {s[illegal_chars.span()[0]]}")
-                else:
-                    new_states.append(s)
-            for s in new_states:
-                env['states_dict'][s] = QuantumState(num_qubits=num_qubits, state_name=s, preset_state=preset_state)                
+        if command.new and is_single_command(command.new):
+            try:
+                env = qcommands.new.command(env, command.new[0])
+            except qcommands.new.NewCommandError as msg:
+                raise ArgumentParserError(msg, error_class='NewCommandError')
 
-        if command.join and single_command(command.join):           
-            name_tag = 'name='
-            command_args = command.join[0]
-            states_being_joined = []
-            states_to_pop = []
-            joint_state_name = ""
-            for s in command_args:
-                if s.startswith(name_tag):
-                    joint_state_name = s[len(name_tag):]
-                elif s in env['states_dict'] and s not in states_to_pop:
-                    states_being_joined.append(env['states_dict'][s])
-                    states_to_pop.append(s)
-                elif s in states_to_pop:
-                    raise ArgumentParserError(f"attempted joining of state {s} with itself")  
-                else:
-                    raise ArgumentParserError(f"invalid parameter assignment or state that doesn't exist: {s}")
-            for s in states_to_pop:
-                env['states_dict'].pop(s)                                 
-            joint_state = functools.reduce(QuantumState.__mul__, states_being_joined)
-            if joint_state_name:
-                joint_state.state_name = joint_state_name
-            env['states_dict'][joint_state.state_name] = joint_state
+        if command.join and is_single_command(command.join):           
+            try:
+                env = qcommands.join.command(env, command.join[0])
+            except qcommands.join.JoinCommandError as msg:
+                raise ArgumentParserError(msg, error_class='JoinCommandError')          
 
-        if command.state and single_command(command.state):
-            for x in command.state[0]:
-                if not x in env['states_dict']:
-                    raise ArgumentParserError(f"{error_message['state not found']}: {x}")
-                else:
-                    env['states_dict'][x].print_state()
+        if command.state and is_single_command(command.state):
+            try:
+                env = qcommands.state.command(env, command.state[0])
+            except qcommands.state.StateCommandError as msg:
+                raise ArgumentParserError(msg, error_class='StateCommandError')
                 
-        if command.circuit and single_command(command.circuit):
-            for x in command.circuit[0]:
-                if not x in env['states_dict']:
-                    raise ArgumentParserError(f"{error_message['state not found']}: {x}")
-                else:
-                    env['states_dict'][x].print_circuit()
+        if command.circuit and is_single_command(command.circuit):
+            try:
+                env = qcommands.circuit.command(env, command.circuit[0])
+            except qcommands.circuit.CircuitCommandError as msg:
+                raise ArgumentParserError(msg, error_class='CircuitCommandError')
                 
-        if command.probs and single_command(command.probs):
-            for x in command.probs[0]:
-                if not x in env['states_dict']:
-                    raise ArgumentParserError(f"{error_message['state not found']}: {x}")
-                else:
-                    env['states_dict'][x].print_probabilities()
+        if command.probs and is_single_command(command.probs):
+            try:
+                env = qcommands.probs.command(env, command.probs[0])
+            except qcommands.probs.ProbabilitiesCommandError as msg:
+                raise ArgumentParserError(msg, error_class='ProbabilitiesCommandError')
 
-        if command.apply and single_command(command.apply):
-            def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
-                if required_num_qubits == 1:
-                    gate_func = gates.one_arg_gates.get(gate_name)
-                elif required_num_qubits == 2:
-                    gate_func = gates.two_arg_gates.get(gate_name)
-                final_qubits = []
-                for qs in qubit_refs:
-                    current_qubits = []
-                    try:
-                        qs = json.loads(qs)
-                        if isinstance(qs, list) and required_num_qubits == len(qs):
-                            int_qs = [int(x) for x in qs]
-                            current_qubits.append(int_qs) 
-                        elif isinstance(qs, int) and required_num_qubits == 1:
-                            int_qs = qs
-                            current_qubits.append(int_qs)
-                        else:
-                            raise ArgumentParserError(f"{error_message['incorrect input for gate']} {gate_name}: {qs}")
-                    except (json.decoder.JSONDecodeError, TypeError, ValueError):
-                        # TypeError example: [1,[2]]
-                        # ValueError example: [1, "hello"]
-                        raise ArgumentParserError(f"{error_message['invalid qubit ref']}: {qs}")
-                    for curr_q in current_qubits:
-                        out_of_bounds = False
-                        if isinstance(curr_q, int):
-                            if not (0 <= curr_q <= s.num_qubits):
-                                out_of_bounds = True 
-                        elif isinstance(curr_q, list):
-                            for x in curr_q:
-                                if not (0 <= x <= s.num_qubits):
-                                    out_of_bounds = True
-                        if not out_of_bounds:
-                            final_qubits.append(curr_q)
-                        else:
-                            raise ArgumentParserError(f"qubit reference(s) out of bounds: {curr_q}")
-                for qs in final_qubits:
-                    qs_list = []
-                    if isinstance(qs, int):
-                        qs_list.append(qs)
-                    else: 
-                        for q in qs:
-                            qs_list.append(q)
-                    try: 
-                        gate_func(s, *qs_list)
-                    except gates.GateError as msg:
-                        raise ArgumentParserError(msg)
-            command_args = command.apply[0]
-            gate_name = command_args[0]
-            s = command_args[1]
-            qubit_refs = command_args[2:]
-            if s not in env['states_dict']:
-                raise ArgumentParserError(f"{error_message['state not found']}: {s}")
-            else: 
-                s = env['states_dict'][s]
-            if not qubit_refs:
-                raise ArgumentParserError(f"{error_message['no qubit ref']}")
-            if gate_name in gates.one_arg_gates:
-                check_qubits_apply_gate(s, 1, qubit_refs, gate_name)                       
-            elif gate_name in gates.two_arg_gates:
-                check_qubits_apply_gate(s, 2, qubit_refs, gate_name)
-            else: 
-                raise ArgumentParserError(f"{error_message['gate not found']}: {gate_name}")             
+        if command.apply and is_single_command(command.apply):
+            try:
+                env = qcommands.apply.command(env, command.apply[0])
+            except qcommands.apply.ApplyCommandError as msg:
+                raise ArgumentParserError(msg, error_class='ApplyCommandError')          
 
-        if command.measure and single_command(command.measure):
-            command_args = command.measure[0]
-            s = command_args[0]
-            qubit_refs = command_args[1:]
-            if s not in env['states_dict']:
-                raise ArgumentParserError(f"{error_message['state not found']}: {s}")
-            else:
-                s = env['states_dict'][s]
-            if not qubit_refs:
-                raise ArgumentParserError(f"{error_message['no qubit ref']}")
-            final_qubits = []
-            for q in qubit_refs:
-                try:
-                    q = json.loads(q)
-                    q = int(q)
-                except (json.decoder.JSONDecodeError, TypeError, ValueError):
-                    raise ArgumentParserError(f"{error_message['invalid qubit ref']}: {q}")
-                if not (0 <= q <= s.num_qubits):
-                    raise ArgumentParserError(f"qubit reference(s) out of bounds: {q}")        
-                else:
-                    final_qubits.append(q)
-            for q in final_qubits:
-                bit = s.measurement(int(q))
-                measurement_number = 1
-                for v in env['vars_dict']:
-                    if v.startswith(f'{s}.{q}.m'):
-                        measurement_number += 1 
-                env['vars_dict'][f"{s.state_name}.{q}.m{measurement_number}"] = bit
+        if command.measure and is_single_command(command.measure):
+            try:
+                env = qcommands.measure.command(env, command.measure[0])
+            except qcommands.measure.MeasureCommandError as msg:
+                raise ArgumentParserError(msg, error_class='MeasureCommandError')  
 
-        if command.rename and single_command(command.rename):
-            command_args = command.rename[0]
-            s = command_args[0]
-            new_s = command_args[1]
-            if s not in env['states_dict']:
-                raise ArgumentParserError(f"{error_message['state not found']}: {s}")                                   
-            illegal_chars = re.search("[^0-9a-zA-Z]", new_s)
-            if illegal_chars:
-                raise ArgumentParserError(f"invalid character(s) in state name: {new_s[illegal_chars.span()[0]]}")
-            s_object = env['states_dict'][s]
-            s_object.state_name = new_s
-            env['states_dict'].pop(s)
-            env['states_dict'].update({new_s : s_object})
+        if command.rename and is_single_command(command.rename):
+            try:
+                env = qcommands.rename.command(env, command.rename[0])
+            except qcommands.rename.RenameCommandError as msg:
+                raise ArgumentParserError(msg, error_class='RenameCommandError')  
 
-        if command.timer and single_command(command.timer):
-            command_args = command.timer[0]
-            decision = command_args[0].upper()
-            if decision == "ON":
-                env['disp_time'] = True 
-            elif decision == "OFF":
-                env['disp_time'] = False
-            else:
-                raise ArgumentParserError(f"incorrect option for timer: {decision}")
+        if command.timer and is_single_command(command.timer):
+            try:
+                env = qcommands.timer.command(env, command.timer[0])
+            except qcommands.timer.TimerCommandError as msg:
+                raise ArgumentParserError(msg, error_class='TimerCommandError') 
+
+        if command.if_then and is_single_command(command.if_then):
+            try:
+                env = qcommands.if_then.command(parser, env, command.if_then[0])
+            except qcommands.if_then.IfThenCommandError as msg:
+                raise ArgumentParserError(msg, error_class='IfThenCommandError') 
+
+        if command.if_then_else and is_single_command(command.if_then_else):
+            try:
+                env = qcommands.if_then_else.command(parser, env, command.if_then_else[0])
+            except qcommands.if_then_else.IfThenElseCommandError as msg:
+                raise ArgumentParserError(msg, error_class='IfThenElseCommandError')
+
+        if command.for_each and is_single_command(command.for_each):
+            try:
+                env = qcommands.for_each.command(parser, env, command.for_each[0])
+            except qcommands.for_each.ForEachCommandError as msg:
+                raise ArgumentParserError(msg, error_class='ForEachCommandError')
+
+        if command.execute and is_single_command(command.execute):
+            try:
+                env = qcommands.execute.command(parser, env, command.execute[0])
+            except qcommands.execute.ExecuteCommandError as msg:
+                raise ArgumentParserError(msg, error_class='ExecuteCommandError')
+        
+        if command.delete and is_single_command(command.delete):
+            try:
+                env = qcommands.delete.command(env, command.delete[0])
+            except qcommands.delete.DeleteCommandError as msg:
+                raise ArgumentParserError(msg, error_class='DeleteCommandError')
+
+        if command.keep and is_single_command(command.keep):
+            try:
+                env = qcommands.keep.command(env, command.keep[0])
+            except qcommands.keep.KeepCommandError as msg:
+                raise ArgumentParserError(msg, error_class='KeepCommandError')
 
         if command.list:
             print(f"states: {list(env['states_dict'].keys())}")
@@ -296,124 +198,6 @@ def execute_commands(parser, commands, env):
                         
         if command.help:
             print(help_message)
-
-        if command.if_then and single_command(command.if_then):
-            command_args = command.if_then[0]
-            if_condition = command_args[0][1:len(command_args[0])-1]
-            then_statements = command_args[1][1:len(command_args[1])-1]
-            try:          
-                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
-                if execute_then_statements == True:
-                    commands = get_commands(parser, then_statements)
-                    env = execute_commands(parser, commands, env)
-            except logic_evaluator.LogicEvaluatorError as msg:
-                raise ArgumentParserError(msg)
-
-        if command.if_then_else and single_command(command.if_then_else):
-            command_args = command.if_then_else[0]
-            if_condition = command_args[0][1:len(command_args[0])-1]
-            then_statements = command_args[1][1:len(command_args[1])-1]
-            else_statements = command_args[2][1:len(command_args[2])-1]
-            try:          
-                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['vars_dict'])
-                if execute_then_statements == True:
-                    commands = get_commands(parser, then_statements)
-                    env = execute_commands(parser, commands, env)
-                elif execute_then_statements == False:
-                    commands = get_commands(parser, else_statements)
-                    env = execute_commands(parser, commands, env)
-            except logic_evaluator.LogicEvaluatorError as msg:
-                raise ArgumentParserError(msg)
-
-        if command.for_each and single_command(command.for_each):
-            command_args = command.for_each[0]
-            i_arg = command_args[0]
-            iterable_arg = command_args[1]
-            statements = command_args[2]
-            iterable_arg = iterable_arg[1:len(iterable_arg)-1].split(',')
-            iterable_arg = [int(x) for x in iterable_arg]
-            if iterable_arg[0] <= iterable_arg[1]:
-                iterable_arg[1] += 1
-            else:
-                iterable_arg[1] -= 1
-            iterable = range(*tuple(iterable_arg))
-            # iterate a number of times as specified by user
-            for i in iterable:       
-                statements_i = statements
-                need_spaces = re.findall('[^a-zA-Z]i[^a-zA-Z]?', statements_i)
-                for pattern in need_spaces:
-                    replacement = pattern.replace(i_arg, str(i))
-                    statements_i = statements_i.replace(pattern, replacement)
-                statements_i = statements_i[1:len(statements_i)-1]
-                commands = get_commands(parser, statements_i)
-                # Execute the current command(s), and return env
-                env = execute_commands(parser, commands, env)
-
-        if command.execute and single_command(command.execute):
-            command_args = command.execute[0]
-            file_name = command_args[0]
-            try:
-                with open(f"{file_name}.clqc", 'r') as file:
-                    script = file.read()
-                    commands = get_commands(parser, script)
-                    env = execute_commands(parser, commands, env)
-            except FileNotFoundError:
-                raise ArgumentParserError(f"file not found: {file_name}")
-        
-        if command.delete and single_command(command.delete):
-            command_args = command.delete[0]
-            delete_type = command_args[len(command_args)-1]
-            objects_to_delete = command_args[0:len(command_args)-1]
-            if delete_type == "state" or delete_type == "states":
-                if len(objects_to_delete) == 0:
-                    objects_to_delete = list(env['states_dict'].keys())
-                    for s in objects_to_delete:
-                        del env['states_dict'][s]
-                else:
-                    for s in objects_to_delete:
-                        if s not in env['states_dict']:
-                            raise ArgumentParserError(f"{error_message['state not found']}: {s}")
-                        else:
-                            del env['states_dict'][s]
-            elif delete_type == "var" or delete_type == "vars":
-                if len(objects_to_delete) == 0:
-                    objects_to_delete = list(env['vars_dict'].keys())
-                    for v in objects_to_delete:
-                        del env['vars_dict'][v]
-                else:
-                    for s in objects_to_delete:
-                        vars_to_delete = []
-                        for v in env['vars_dict']:
-                            if v.startswith(f'{s}.'):
-                                vars_to_delete.append(v)
-                        for v in vars_to_delete:
-                            del env['vars_dict'][v]
-            else: 
-                raise ArgumentParserError(f"must specify deletion with either state / states or var / vars") 
-
-        if command.keep and single_command(command.keep):
-            command_args = command.keep[0]
-            keep_type = command_args[len(command_args)-1]
-            objects_to_keep = command_args[0:len(command_args)-1]           
-            if keep_type == "state" or keep_type == "states":
-                states_to_delete = []
-                for s in env['states_dict']:
-                    if s not in objects_to_keep:
-                        states_to_delete.append(s)
-                for s in states_to_delete:
-                    del env['states_dict'][s]
-            elif keep_type == "var" or keep_type == "vars":
-                vars_to_delete = []
-                for s in objects_to_keep:
-                    for v in env['vars_dict']:
-                        if v.startswith(f'{s}.'):
-                            pass
-                        else:
-                            vars_to_delete.append(v)
-                for v in vars_to_delete:
-                    del env['vars_dict'][v]
-            else: 
-                raise ArgumentParserError(f"must specify deletion with either state / states or var / vars") 
 
     return env
 
@@ -430,15 +214,16 @@ def main():
     g.add_argument('-m', '--measure', nargs='+', action='append')
     g.add_argument('-r', '--rename', nargs=2, action='append')
     g.add_argument('-t', '--timer', nargs=1, action='append')
-    g.add_argument('-l', '--list', action='store_true')
-    g.add_argument('-q', '--quit', action='store_true')
-    g.add_argument('-h', '--help', action='store_true')
     g.add_argument('-i-t', '--if-then', nargs=2, action='append')
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
     g.add_argument('-f-e', '--for-each', nargs=3, action='append')
     g.add_argument('-e', '--execute', nargs=1, action='append')
     g.add_argument('-d', '--delete', nargs='+', action='append')
     g.add_argument('-k', '--keep', nargs='+', action='append')
+    g.add_argument('-l', '--list', action='store_true')
+    g.add_argument('-q', '--quit', action='store_true')
+    g.add_argument('-h', '--help', action='store_true')
+
     env = {}
     env['states_dict'] = {}
     env['vars_dict'] = {}
@@ -463,7 +248,7 @@ def main():
             if env['disp_time']:
                 print("Time taken: " + str(end - start) + " seconds")
         except ArgumentParserError as e:
-            print(f"ERROR: {e.message}")
+            print(f"{e.error_class}: {e.message}")
 
     quit()
 

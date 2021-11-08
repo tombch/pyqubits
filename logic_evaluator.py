@@ -25,9 +25,9 @@ env = {
 }
 
 def get_tokens(user_input):
-    user_input = user_input.replace(' ', '')
     for k in env.keys():
-        user_input = user_input.replace(env[k]['symbol'], f" {env[k]['symbol']} ")        
+        if env[k]['nargs'] > 0:
+            user_input = user_input.replace(env[k]['symbol'], f" {env[k]['symbol']} ")        
     user_input = user_input.replace('(', ' ( ')
     user_input = user_input.replace(')', ' ) ')
     tokens = user_input.split()
@@ -76,7 +76,6 @@ def get_expression(tokens, sub_expr_count=0):
         raise LogicEvaluatorError("Syntax error: Missing closing ')'")
     return expression, i, sub_expr_count
         
-
 def evaluate(expr, accept_type_errors=False):
     try:
         if not isinstance(expr, list):
