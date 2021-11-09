@@ -28,7 +28,7 @@ def command(env, command_args):
         bit = s.measurement(int(q))
         measurement_number = 1
         for v in env['vars_dict']:
-            if v.startswith(f'{s}.{q}.m'):
+            if v.startswith(f'{s.state_name}.{q}.m'):
                 measurement_number += 1 
         env['vars_dict'][f"{s.state_name}.{q}.m{measurement_number}"] = bit
     return env

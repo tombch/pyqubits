@@ -1,7 +1,10 @@
 class DeleteCommandError(Exception):
     pass
 
+
 def command(env, command_args):
+    delete_state_options = ['.s', '.state', '.states']
+    delete_measurement_options = ['.m', '.measurement', '.measurements']
     delete_type = command_args[0]
     objects_to_delete = command_args[1:len(command_args)]
     delete_all_states = False
@@ -11,7 +14,7 @@ def command(env, command_args):
         delete_all_states = True
         delete_all_measurements = True
     # If the first arg is state or states, and any other arg is *, delete all states
-    elif delete_type == "state" or delete_type == "states":
+    elif delete_type in delete_state_options:
         if len(objects_to_delete) > 0:
             for x in objects_to_delete:
                 if x == '*':
@@ -20,7 +23,7 @@ def command(env, command_args):
         else:
             raise DeleteCommandError(f"No state(s) provided.")
     # If the first arg is measurement or measurements, and any other arg is *, delete all measurements
-    elif delete_type == "measurement" or delete_type == "measurements": 
+    elif delete_type in delete_measurement_options:
         if len(objects_to_delete) > 0:
             for x in objects_to_delete:
                 if x == '*':
@@ -30,18 +33,16 @@ def command(env, command_args):
             raise DeleteCommandError(f"No measurement(s) provided.")
     # Otherwise, arguments don't fit the defined format and so an error is thrown
     else: 
-        raise DeleteCommandError(f"First argument '{delete_type}' does not specify the deletion type. Options are: *, state, states, measurement, measurements")
+        raise DeleteCommandError(f"First argument '{delete_type}' does not specify the deletion type. Options are: *, {', '.join(delete_state_options)}, {', '.join(delete_measurement_options)}")
     # Remove all states from the environment if instructed
     if delete_all_states:
         objects_to_delete = list(env['states_dict'].keys())
         for s in objects_to_delete:
             del env['states_dict'][s]
     # Otherwise, remove specified states
-    elif delete_type == "state" or delete_type == "states":
+    elif delete_type in delete_state_options:
         for s in objects_to_delete:
-            if s not in env['states_dict']:
-                raise DeleteCommandError(f"State '{s}' doesn't exist.") 
-            else:
+            if s in env['states_dict']:
                 del env['states_dict'][s]
     # Remove all measurements from the environment if instructed
     if delete_all_measurements:
@@ -49,7 +50,7 @@ def command(env, command_args):
         for v in objects_to_delete:
             del env['vars_dict'][v]
     # Otherwise, remove specified measurements
-    elif delete_type == "measurement" or delete_type == "measurements":
+    elif delete_type in delete_measurement_options:
         for s in objects_to_delete:
             measurements_to_delete = []
             for v in env['vars_dict']:

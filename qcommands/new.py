@@ -1,12 +1,14 @@
 import re
 from quantum_state import QuantumState
 
+
 class NewCommandError(Exception):
     pass
 
+
 def command(env, command_args):
-    tags = {'num_qubits' : {'rep' : ['nq=', 'qubits='], 'type' : int, 'choices' : 'integers'}, 
-            'preset_state' : {'rep' : ['s=', 'state='], 'type' : str, 'choices' : ['zero', 'one']}}
+    tags = {'num_qubits' : {'rep' : ['.nq=', '.qubits='], 'type' : int, 'choices' : 'integers'}, 
+            'preset_state' : {'rep' : ['.p=', '.preset='], 'type' : str, 'choices' : ['zero', 'one']}}
     keyword_args = {'num_qubits' : 1, 'preset_state' : None}
     new_states = []
     for i in range(len(command_args)):
@@ -51,7 +53,7 @@ def command(env, command_args):
         if not is_tag:
             if '=' in s:
                 # We assume a faulty tag assignment and raise appropriate error
-                raise NewCommandError(f"'{s.split('=')[0]}' is not a recognised tag.")
+                raise NewCommandError(f"'{s.split('=')[0]}' is not a recognised tag for this command.")
             else:
                 illegal_chars = re.search("[^0-9a-zA-Z]", s)
                 # If the name contains an illegal character, declare an error. Otherwise, append to list of states to be created

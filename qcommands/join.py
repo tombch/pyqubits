@@ -2,11 +2,13 @@ import re
 import functools
 from quantum_state import QuantumState
 
+
 class JoinCommandError(Exception):
     pass
 
+
 def command(env, command_args):
-    name_tag = 'name='
+    name_tag = '.name='
     states_being_joined = []
     states_to_pop = []
     joint_state_name = None
@@ -22,7 +24,7 @@ def command(env, command_args):
                     joint_state_name = tag_value
             else:
                 # We assume a faulty tag assignment and raise appropriate error
-                raise JoinCommandError(f"'{s.split('=')[0]}' is not a recognised tag.")
+                raise JoinCommandError(f"'{s.split('=')[0]}' is not a recognised tag for this command.")
         elif s in env['states_dict'] and s not in states_to_pop:
             states_being_joined.append(env['states_dict'][s])
             states_to_pop.append(s)

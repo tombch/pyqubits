@@ -1,7 +1,9 @@
 import re
 
+
 class RenameCommandError(Exception):
     pass
+
 
 def command(env, command_args):
     s = command_args[0]
