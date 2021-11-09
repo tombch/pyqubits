@@ -21,7 +21,7 @@ class ThrowingArgumentParser(argparse.ArgumentParser):
 
 def regroup(split_statement, left_char, right_char, split_char=""):
     '''
-    regroup expressions/lists after separation caused by splitting the string on split_char
+    Re-group expressions/lists after separation caused by splitting the string on split_char.
     split_char must be specified when calling regroup, otherwise expressions/lists may be reconstructed incorrectly.
     '''
     regrouped_expressions = []
@@ -202,19 +202,19 @@ def main():
     g = parser.add_mutually_exclusive_group()
     g.add_argument('-n', '--new', nargs='+', action='append')
     g.add_argument('-j', '--join', nargs='+', action='append')
+    g.add_argument('-r', '--rename', nargs=2, action='append')
+    g.add_argument('-d', '--delete', nargs='+', action='append')
+    g.add_argument('-k', '--keep', nargs='+', action='append')
     g.add_argument('-s', '--state', nargs='+', action='append')
     g.add_argument('-c', '--circuit', nargs='+', action='append')
     g.add_argument('-p', '--probs', nargs='+', action='append')
     g.add_argument('-a', '--apply', nargs='+', action='append')
     g.add_argument('-m', '--measure', nargs='+', action='append')
-    g.add_argument('-r', '--rename', nargs=2, action='append')
     g.add_argument('-t', '--timer', nargs=1, action='append')
     g.add_argument('-i-t', '--if-then', nargs=2, action='append')
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
     g.add_argument('-f-e', '--for-each', nargs=3, action='append')
     g.add_argument('-e', '--execute', nargs=1, action='append')
-    g.add_argument('-d', '--delete', nargs='+', action='append')
-    g.add_argument('-k', '--keep', nargs='+', action='append')
     g.add_argument('-l', '--list', action='store_true')
     g.add_argument('-q', '--quit', action='store_true')
     g.add_argument('-h', '--help', action='store_true')
