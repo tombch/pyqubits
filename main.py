@@ -1,13 +1,14 @@
+import readline
 import time
 import argparse
 import re
 import copy
-import cProfile, pstats, io
 import logic_evaluator
 import gates
 import qcommands
 from quantum_state import QuantumState
 from messages import help_message, error_message
+
 
 class ArgumentParserError(Exception):
     __slots = 'message', 'error_class'
@@ -15,9 +16,11 @@ class ArgumentParserError(Exception):
         self.message = message
         self.error_class = error_class
 
+
 class ThrowingArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         raise ArgumentParserError(message)
+
 
 def regroup(split_statement, left_char, right_char, split_char=""):
     '''
@@ -52,6 +55,7 @@ def regroup(split_statement, left_char, right_char, split_char=""):
         raise ArgumentParserError(f"incorrect syntax: missing '{left_char}'")
     return regrouped_expressions
 
+
 def get_commands(parser, statements):
     statements = statements.replace('\n', ' ')
     statements = statements.replace("{", " { ")
@@ -85,11 +89,13 @@ def get_commands(parser, statements):
         commands.append(command)
     return commands
 
+
 def is_single_command(command_obj):
     if len(command_obj) != 1:
         raise ArgumentParserError(error_message['too many commands'])
     else:
         return True
+
 
 def execute_commands(parser, commands, env):
     env = copy.deepcopy(env)
@@ -196,8 +202,25 @@ def execute_commands(parser, commands, env):
 
     return env
 
+
+def completer(text, state):
+    arguments = ['--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', 
+                 '--probs', '--apply', '--measure', '--timer', '--if-then', '--if-then-else', 
+                 '--for-each', '--execute', '--list', '--quit', '--help', 
+                 '.nq=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements']
+    options = [i for i in arguments if len(text) > 0 and i.startswith(text)]
+    if state < len(options):
+        return options[state]
+    else:
+        return None
+
+
 def main():
     print("Welcome to my terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.\n")
+    readline.parse_and_bind("tab: complete")
+    old_delims = readline.get_completer_delims()
+    readline.set_completer_delims(old_delims.replace('-', ''))
+    readline.set_completer(completer)
     parser = ThrowingArgumentParser(allow_abbrev=False, add_help=False)
     g = parser.add_mutually_exclusive_group()
     g.add_argument('-n', '--new', nargs='+', action='append')
@@ -205,11 +228,11 @@ def main():
     g.add_argument('-r', '--rename', nargs=2, action='append')
     g.add_argument('-d', '--delete', nargs='+', action='append')
     g.add_argument('-k', '--keep', nargs='+', action='append')
+    g.add_argument('-a', '--apply', nargs='+', action='append')
+    g.add_argument('-m', '--measure', nargs='+', action='append')
     g.add_argument('-s', '--state', nargs='+', action='append')
     g.add_argument('-c', '--circuit', nargs='+', action='append')
     g.add_argument('-p', '--probs', nargs='+', action='append')
-    g.add_argument('-a', '--apply', nargs='+', action='append')
-    g.add_argument('-m', '--measure', nargs='+', action='append')
     g.add_argument('-t', '--timer', nargs=1, action='append')
     g.add_argument('-i-t', '--if-then', nargs=2, action='append')
     g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
@@ -228,6 +251,7 @@ def main():
         try:      
             statements = input('#~: ')
             start = time.time()
+            # import cProfile, pstats, io
             # pr = cProfile.Profile()
             # pr.enable()
             # Parse the current statement(s) and return command(s) that can be acted on
@@ -246,6 +270,7 @@ def main():
             print(f"{e.error_class}: {e.message}")
 
     quit()
+
 
 if __name__ == '__main__':
     main()
