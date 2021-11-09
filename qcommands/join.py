@@ -1,5 +1,5 @@
-from quantum_state import QuantumState
 import functools
+from quantum_state import QuantumState
 
 class JoinCommandError(Exception):
     pass

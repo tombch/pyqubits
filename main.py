@@ -1,8 +1,5 @@
 import time
-import numpy as np
 import argparse
-import functools
-import json
 import re
 import copy
 import cProfile, pstats, io
@@ -63,8 +60,6 @@ def get_commands(parser, statements):
     statements = statements.replace("]", " ] ")
     statements = statements.replace("(", " ( ")
     statements = statements.replace(")", " ) ")
-    # statements = statements.replace("<", " < ")
-    # statements = statements.replace(">", " > ")
     statements = statements.split(';')
     # After splitting on ; we need to regroup any split subcommands
     # These subcommands are contained within { }
@@ -111,6 +106,36 @@ def execute_commands(parser, commands, env):
             except qcommands.join.JoinCommandError as msg:
                 raise ArgumentParserError(msg, error_class='JoinCommandError')          
 
+        if command.rename and is_single_command(command.rename):
+            try:
+                env = qcommands.rename.command(env, command.rename[0])
+            except qcommands.rename.RenameCommandError as msg:
+                raise ArgumentParserError(msg, error_class='RenameCommandError')  
+
+        if command.delete and is_single_command(command.delete):
+            try:
+                env = qcommands.delete.command(env, command.delete[0])
+            except qcommands.delete.DeleteCommandError as msg:
+                raise ArgumentParserError(msg, error_class='DeleteCommandError')
+
+        if command.keep and is_single_command(command.keep):
+            try:
+                env = qcommands.keep.command(env, command.keep[0])
+            except qcommands.keep.KeepCommandError as msg:
+                raise ArgumentParserError(msg, error_class='KeepCommandError')
+
+        if command.apply and is_single_command(command.apply):
+            try:
+                env = qcommands.apply.command(env, command.apply[0])
+            except qcommands.apply.ApplyCommandError as msg:
+                raise ArgumentParserError(msg, error_class='ApplyCommandError')          
+
+        if command.measure and is_single_command(command.measure):
+            try:
+                env = qcommands.measure.command(env, command.measure[0])
+            except qcommands.measure.MeasureCommandError as msg:
+                raise ArgumentParserError(msg, error_class='MeasureCommandError')  
+
         if command.state and is_single_command(command.state):
             try:
                 env = qcommands.state.command(env, command.state[0])
@@ -128,30 +153,6 @@ def execute_commands(parser, commands, env):
                 env = qcommands.probs.command(env, command.probs[0])
             except qcommands.probs.ProbabilitiesCommandError as msg:
                 raise ArgumentParserError(msg, error_class='ProbabilitiesCommandError')
-
-        if command.apply and is_single_command(command.apply):
-            try:
-                env = qcommands.apply.command(env, command.apply[0])
-            except qcommands.apply.ApplyCommandError as msg:
-                raise ArgumentParserError(msg, error_class='ApplyCommandError')          
-
-        if command.measure and is_single_command(command.measure):
-            try:
-                env = qcommands.measure.command(env, command.measure[0])
-            except qcommands.measure.MeasureCommandError as msg:
-                raise ArgumentParserError(msg, error_class='MeasureCommandError')  
-
-        if command.rename and is_single_command(command.rename):
-            try:
-                env = qcommands.rename.command(env, command.rename[0])
-            except qcommands.rename.RenameCommandError as msg:
-                raise ArgumentParserError(msg, error_class='RenameCommandError')  
-
-        if command.timer and is_single_command(command.timer):
-            try:
-                env = qcommands.timer.command(env, command.timer[0])
-            except qcommands.timer.TimerCommandError as msg:
-                raise ArgumentParserError(msg, error_class='TimerCommandError') 
 
         if command.if_then and is_single_command(command.if_then):
             try:
@@ -176,22 +177,16 @@ def execute_commands(parser, commands, env):
                 env = qcommands.execute.command(parser, env, command.execute[0])
             except qcommands.execute.ExecuteCommandError as msg:
                 raise ArgumentParserError(msg, error_class='ExecuteCommandError')
-        
-        if command.delete and is_single_command(command.delete):
-            try:
-                env = qcommands.delete.command(env, command.delete[0])
-            except qcommands.delete.DeleteCommandError as msg:
-                raise ArgumentParserError(msg, error_class='DeleteCommandError')
 
-        if command.keep and is_single_command(command.keep):
+        if command.timer and is_single_command(command.timer):
             try:
-                env = qcommands.keep.command(env, command.keep[0])
-            except qcommands.keep.KeepCommandError as msg:
-                raise ArgumentParserError(msg, error_class='KeepCommandError')
+                env = qcommands.timer.command(env, command.timer[0])
+            except qcommands.timer.TimerCommandError as msg:
+                raise ArgumentParserError(msg, error_class='TimerCommandError') 
 
         if command.list:
             print(f"states: {list(env['states_dict'].keys())}")
-            print(f"variables: {list(env['vars_dict'].keys())}")
+            print(f"measurements: {list(env['vars_dict'].keys())}")
 
         if command.quit:
             env['quit_program'] = True
