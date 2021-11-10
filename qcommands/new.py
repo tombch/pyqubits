@@ -42,7 +42,7 @@ def command(env, command_args):
                                 keyword_args[tag_name] = typed_tag_value
                             else:
                                 raise NewCommandError(f"'{tag_value}' cannot be assigned to the {tag_rep[:-1]} tag. Accepted values are: {', '.join(tags[tag_name]['choices'])}")
-                        # Return none if custom type check failed (e.g. is int but is not > 0)
+                        # None is returned if a custom type check failed (e.g. input is an int but is not > 0)
                         elif typed_tag_value == None:
                             raise ValueError
                         # Otherwise, assign the value to the corresponding keyword_arg
