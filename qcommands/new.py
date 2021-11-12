@@ -7,7 +7,7 @@ class NewCommandError(Exception):
 
 
 def command(env, command_args):
-    tags = {'num_qubits' : {'rep' : ['.nq=', '.qubits='], 'type' : int, 'choices' : 'integers'}, 
+    tags = {'num_qubits' : {'rep' : ['.nq=', '.qubits='], 'type' : (lambda x : int(x) if int(x) > 0 else None), 'choices' : 'natural numbers'}, 
             'preset_state' : {'rep' : ['.p=', '.preset='], 'type' : str, 'choices' : ['zero', 'one']}}
     keyword_args = {'num_qubits' : 1, 'preset_state' : None}
     new_states = []
@@ -35,13 +35,16 @@ def command(env, command_args):
                         if len(tag_value) == 0:
                             tag_value = command_args[i+1]
                         # Assign the designated type to the value
-                        typed_tag_value = tags[tag_name]['type'](tag_value) 
+                        typed_tag_value = tags[tag_name]['type'](tag_value)
                         # If the value can be only one of a select few choices (indicated by choices being a list), then check it matches and if not raise an error.
                         if isinstance(tags[tag_name]['choices'], list):
                             if typed_tag_value in tags[tag_name]['choices']:
                                 keyword_args[tag_name] = typed_tag_value
                             else:
                                 raise NewCommandError(f"'{tag_value}' cannot be assigned to the {tag_rep[:-1]} tag. Accepted values are: {', '.join(tags[tag_name]['choices'])}")
+                        # None is returned if a custom type check failed (e.g. input is an int but is not > 0)
+                        elif typed_tag_value == None:
+                            raise ValueError
                         # Otherwise, assign the value to the corresponding keyword_arg
                         else:
                             keyword_args[tag_name] = typed_tag_value
