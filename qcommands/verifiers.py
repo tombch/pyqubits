@@ -71,14 +71,10 @@ def is_valid_qubit_list_of_state(q_list, s):
 
 
 def construct_int_list(q_list):
-    if q_list[0] == '[':
-        q_list = q_list[1:]
-    else:
+    if q_list[0] != '[' or q_list[-1] != ']':
         return None
-    if q_list[-1] == ']':
-        q_list = q_list[:-1]
     else:
-        return None
+        q_list = q_list[1:-1]
     items = q_list.split(',')
     try:
         for i in range(len(items)):
