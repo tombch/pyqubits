@@ -2,8 +2,10 @@ from messages import error_message
 import json
 import gates
 
+
 class ApplyCommandError(Exception):
     pass
+
 
 def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
     if required_num_qubits == 1:
@@ -51,6 +53,7 @@ def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
             gate_func(s, *qs_list)
         except gates.GateError as msg:
             raise ApplyCommandError(msg)
+
 
 def command(env, command_args):
     gate_name = command_args[0]

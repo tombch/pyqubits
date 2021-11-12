@@ -1,8 +1,10 @@
 import json
 from messages import error_message
 
+
 class MeasureCommandError(Exception):
     pass
+
 
 def command(env, command_args):
     s = command_args[0]
