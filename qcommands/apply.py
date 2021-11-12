@@ -1,74 +1,40 @@
-from messages import error_message
-import json
 import gates
+from . import verifiers as v
 
 
 class ApplyCommandError(Exception):
     pass
 
 
-def check_qubits_apply_gate(s, required_num_qubits, qubit_refs, gate_name):
-    if required_num_qubits == 1:
-        gate_func = gates.one_arg_gates.get(gate_name)
-    elif required_num_qubits == 2:
-        gate_func = gates.two_arg_gates.get(gate_name)
-    final_qubits = []
-    for qs in qubit_refs:
-        current_qubits = []
-        try:
-            qs = json.loads(qs)
-            if isinstance(qs, list) and required_num_qubits == len(qs):
-                int_qs = [int(x) for x in qs]
-                current_qubits.append(int_qs) 
-            elif isinstance(qs, int) and required_num_qubits == 1:
-                int_qs = qs
-                current_qubits.append(int_qs)
-            else:
-                raise ApplyCommandError(f"{error_message['incorrect input for gate']} {gate_name}: {qs}")
-        except (json.decoder.JSONDecodeError, TypeError, ValueError):
-            # TypeError example: [1,[2]]
-            # ValueError example: [1, "hello"]
-            raise ApplyCommandError(f"{error_message['invalid qubit ref']}: {qs}")
-        for curr_q in current_qubits:
-            out_of_bounds = False
-            if isinstance(curr_q, int):
-                if not (0 <= curr_q <= s.num_qubits):
-                    out_of_bounds = True 
-            elif isinstance(curr_q, list):
-                for x in curr_q:
-                    if not (0 <= x <= s.num_qubits):
-                        out_of_bounds = True
-            if not out_of_bounds:
-                final_qubits.append(curr_q)
-            else:
-                raise ApplyCommandError(f"qubit reference(s) out of bounds: {curr_q}")
-    for qs in final_qubits:
-        qs_list = []
-        if isinstance(qs, int):
-            qs_list.append(qs)
-        else: 
-            for q in qs:
-                qs_list.append(q)
-        try: 
-            gate_func(s, *qs_list)
-        except gates.GateError as msg:
-            raise ApplyCommandError(msg)
-
-
 def command(env, command_args):
-    gate_name = command_args[0]
-    s = command_args[1]
-    qubit_refs = command_args[2:]
-    if s not in env['states_dict']:
-        raise ApplyCommandError(f"{error_message['state not found']}: {s}")
-    else: 
-        s = env['states_dict'][s]
-    if not qubit_refs:
-        raise ApplyCommandError(f"{error_message['no qubit ref']}")
-    if gate_name in gates.one_arg_gates:
-        check_qubits_apply_gate(s, 1, qubit_refs, gate_name)                       
-    elif gate_name in gates.two_arg_gates:
-        check_qubits_apply_gate(s, 2, qubit_refs, gate_name)
-    else: 
-        raise ApplyCommandError(f"{error_message['gate not found']}: {gate_name}")
-    return env 
+    if len(command_args) < 3:
+        raise ApplyCommandError(f"Expected at least 3 arguments.")
+    else:
+        g = command_args[0]
+        s = command_args[1]
+        qubits = command_args[2:]        
+        if not v.is_existing_gate(g, env):
+            raise ApplyCommandError(f"Gate '{g}' doesn't exist.")
+        else:
+            if not v.is_existing_state(s, env):
+                raise ApplyCommandError(f"State '{s}' doesn't exist.")
+            else:
+                s_object = env['states_dict'][s]
+                g_num_args = env['gates_dict'][g]['nargs']
+                g_func = env['gates_dict'][g]['func']
+                if g_num_args > 1:
+                    for q_list in qubits:
+                        q_list_object = v.construct_int_list(q_list)
+                        if q_list_object == None or not v.is_valid_qubit_list_of_state(q_list_object, s_object):
+                            raise ApplyCommandError(f"Invalid reference of qubits in state {s}: {q_list}. Must be a list of qubit references with no duplicates.")
+                        elif len(q_list_object) != g_num_args:
+                            raise ApplyCommandError(f"When applying {g} to state {s}: expected {g_num_args} qubits for {g} but received {len(q_list_object)}.")
+                        else:
+                            g_func(s_object, *q_list_object)
+                else:
+                    for q in qubits:
+                        if not v.is_valid_qubit_of_state(q, s_object):
+                            raise ApplyCommandError(f"Invalid reference of qubit in state {s}: {q}. Must be an integer > 0.")
+                        else:
+                            g_func(s_object, int(q))
+    return env

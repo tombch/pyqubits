@@ -1,8 +1,10 @@
 import main
 import re
 
+
 class ForEachCommandError(Exception):
     pass
+
 
 def command(parser, env, command_args):
     i_arg = command_args[0]

@@ -13,3 +13,4 @@ import qcommands.for_each
 import qcommands.execute
 import qcommands.delete
 import qcommands.keep
+import qcommands.verifiers

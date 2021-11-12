@@ -181,4 +181,4 @@ class QuantumState:
         gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))
         print(f"Probabilities for {self.state_name} {[self.num_actions]}:")
         for x in gen_classical_states:
-            print(f" {x[1]}\t{round(abs(self.state_vector[x[0]])**2, 2)}\t{'=' * round(50 * abs(self.state_vector[x[0]])**2)}")
+            print(f" {x[1]}\t{round(abs(self.state_vector[x[0]])**2, 2)}\t{'=' * int(round(50 * abs(self.state_vector[x[0]])**2))}")

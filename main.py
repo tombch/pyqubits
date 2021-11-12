@@ -207,7 +207,7 @@ def completer(text, state):
     arguments = ['--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', 
                  '--probs', '--apply', '--measure', '--timer', '--if-then', '--if-then-else', 
                  '--for-each', '--execute', '--list', '--quit', '--help', 
-                 '.nq=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements']
+                 '.qs=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements']
     options = [i for i in arguments if len(text) > 0 and i.startswith(text)]
     if state < len(options):
         return options[state]
@@ -223,28 +223,29 @@ def main():
     readline.set_completer(completer)
     parser = ThrowingArgumentParser(allow_abbrev=False, add_help=False)
     g = parser.add_mutually_exclusive_group()
-    g.add_argument('-n', '--new', nargs='+', action='append')
-    g.add_argument('-j', '--join', nargs='+', action='append')
-    g.add_argument('-r', '--rename', nargs=2, action='append')
-    g.add_argument('-d', '--delete', nargs='+', action='append')
-    g.add_argument('-k', '--keep', nargs='+', action='append')
-    g.add_argument('-a', '--apply', nargs='+', action='append')
-    g.add_argument('-m', '--measure', nargs='+', action='append')
-    g.add_argument('-s', '--state', nargs='+', action='append')
-    g.add_argument('-c', '--circuit', nargs='+', action='append')
-    g.add_argument('-p', '--probs', nargs='+', action='append')
-    g.add_argument('-t', '--timer', nargs=1, action='append')
-    g.add_argument('-i-t', '--if-then', nargs=2, action='append')
-    g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append')
-    g.add_argument('-f-e', '--for-each', nargs=3, action='append')
-    g.add_argument('-e', '--execute', nargs=1, action='append')
-    g.add_argument('-l', '--list', action='store_true')
-    g.add_argument('-q', '--quit', action='store_true')
-    g.add_argument('-h', '--help', action='store_true')
+    g.add_argument('-n', '--new', nargs='+', action='append') # DONE
+    g.add_argument('-j', '--join', nargs='+', action='append') # DONE
+    g.add_argument('-r', '--rename', nargs=2, action='append') # DONE
+    g.add_argument('-d', '--delete', nargs='+', action='append') # TODO
+    g.add_argument('-k', '--keep', nargs='+', action='append') # TODO
+    g.add_argument('-a', '--apply', nargs='+', action='append') # DONE
+    g.add_argument('-m', '--measure', nargs='+', action='append') # DONE
+    g.add_argument('-s', '--state', nargs='+', action='append') # DONE
+    g.add_argument('-c', '--circuit', nargs='+', action='append') # DONE
+    g.add_argument('-p', '--probs', nargs='+', action='append') # DONE
+    g.add_argument('-i-t', '--if-then', nargs=2, action='append') # DONE
+    g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append') # DONE
+    g.add_argument('-f-e', '--for-each', nargs=3, action='append') # TODO
+    g.add_argument('-e', '--execute', nargs=1, action='append') # DONE
+    g.add_argument('-t', '--timer', nargs=1, action='append') # DONE
+    g.add_argument('-l', '--list', action='store_true') # TODO
+    g.add_argument('-q', '--quit', action='store_true') # TODO
+    g.add_argument('-h', '--help', action='store_true') # TODO
 
     env = {}
     env['states_dict'] = {}
     env['vars_dict'] = {}
+    env['gates_dict'] = gates.gates_dict
     env['disp_time'] = False
     env['quit_program'] = False
     while not env['quit_program']:
@@ -267,7 +268,10 @@ def main():
             if env['disp_time']:
                 print("Time taken: " + str(end - start) + " seconds")
         except ArgumentParserError as e:
-            print(f"{e.error_class}: {e.message}")
+            if e.error_class:
+                print(f"{e.error_class}: {e.message}")
+            else:
+                print(e.message)
 
     quit()
 

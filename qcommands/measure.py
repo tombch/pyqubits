@@ -1,5 +1,4 @@
-import json
-from messages import error_message
+from . import verifiers as v
 
 
 class MeasureCommandError(Exception):
@@ -8,29 +7,22 @@ class MeasureCommandError(Exception):
 
 def command(env, command_args):
     s = command_args[0]
-    qubit_refs = command_args[1:]
-    if s not in env['states_dict']:
-        raise MeasureCommandError(f"{error_message['state not found']}: {s}")
+    qubits = command_args[1:]
+    if not v.is_existing_state(s, env):
+        raise MeasureCommandError(f"State '{s}' doesn't exist.")
     else:
-        s = env['states_dict'][s]
-    if not qubit_refs:
-        raise MeasureCommandError(f"{error_message['no qubit ref']}")
-    final_qubits = []
-    for q in qubit_refs:
-        try:
-            q = json.loads(q)
-            q = int(q)
-        except (json.decoder.JSONDecodeError, TypeError, ValueError):
-            raise MeasureCommandError(f"{error_message['invalid qubit ref']}: {q}")
-        if not (0 <= q <= s.num_qubits):
-            raise MeasureCommandError(f"qubit reference(s) out of bounds: {q}")        
+        s_object = env['states_dict'][s]
+        if not qubits:
+            raise MeasureCommandError(f"No qubit reference(s) given for state {s}.")
         else:
-            final_qubits.append(q)
-    for q in final_qubits:
-        bit = s.measurement(int(q))
-        measurement_number = 1
-        for v in env['vars_dict']:
-            if v.startswith(f'{s.state_name}.{q}.m'):
-                measurement_number += 1 
-        env['vars_dict'][f"{s.state_name}.{q}.m{measurement_number}"] = bit
+            for q in qubits:
+                if v.is_valid_qubit_of_state(q, s_object):
+                    bit = s_object.measurement(int(q))
+                    measurement_number = 1
+                    for measurement in env['vars_dict']:
+                        if measurement.startswith(f'{s}.{q}.m'):
+                            measurement_number += 1 
+                    env['vars_dict'][f"{s}.{q}.m{measurement_number}"] = bit
+                else:
+                    raise MeasureCommandError(f"Invalid reference of qubit in state {s}: {q}")
     return env

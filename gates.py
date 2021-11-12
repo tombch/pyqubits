@@ -1,8 +1,10 @@
 import numpy as np
 import random
 
+
 class GateError(Exception):
     pass
+
 
 zero_matrix = np.array([[1+0j, 0+0j], [0+0j, 0+0j]])
 one_matrix = np.array([[0+0j, 0+0j], [0+0j, 1+0j]])
@@ -18,8 +20,14 @@ U_f_matrix_2 = np.array([[0+0j, 1+0j, 0+0j, 0+0j], [1+0j, 0+0j, 0+0j, 0+0j], [0+
 U_f_matrix_3 = np.array([[1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 1+0j, 0+0j, 0+0j], [0+0j, 0+0j, 0+0j, 1+0j], [0+0j, 0+0j, 1+0j, 0+0j]])  
 U_f_matrix_4 = np.array([[1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 1+0j, 0+0j, 0+0j], [0+0j, 0+0j, 0+0j, 1+0j], [0+0j, 0+0j, 1+0j, 0+0j]])
 
+
 # Functions for manipulating quantum states
 def apply_gate(s, chosen_matrix, gate_char, qubit=1):
+    # TODO: handle cases like qubit being a string
+    # Currently unnecessary as it is filtered out by the parser and command modules
+    # But will need doing if gates becomes a standalone module
+    # if not isinstance(qubit, int):
+    #     raise GateError(f"{s.state_name}: qubit {qubit} is not an integer")
     if (qubit == 1):
         gate_matrix = chosen_matrix
     else:
@@ -37,6 +45,7 @@ def apply_gate(s, chosen_matrix, gate_char, qubit=1):
         else:
             new_wire += "|"+" "*s.w
     s.update_circuit(new_wire)
+
 
 def apply_cgate(s, chosen_matrix, gate_char, control=1, target=2):
     if control != target:
@@ -88,47 +97,61 @@ def apply_cgate(s, chosen_matrix, gate_char, control=1, target=2):
     else:
         raise GateError(f"{s.state_name}: controlled gate with control={control}, target={target}: control and target cannot be the same")
 
+
 def X(s, qubit):
     apply_gate(s, X_matrix, "X", qubit)
+
 
 def Y(s, qubit):
     apply_gate(s, Y_matrix, "Y", qubit)
 
+
 def Z(s, qubit):
     apply_gate(s, Z_matrix, "Z", qubit)
+
 
 def H(s, qubit):
     apply_gate(s, H_matrix, "H", qubit)
 
+
 def P(s, qubit):
     apply_gate(s, P_matrix, "P", qubit)
+
 
 def T(s, qubit):
     apply_gate(s, T_matrix, "T", qubit)
 
+
 def CNOT(s, control, target):
     apply_cgate(s, X_matrix, "X", control, target)
+
 
 def C_Y(s, control, target):
     apply_cgate(s, Y_matrix, "Y", control, target)
 
+
 def C_Z(s, control, target):
     apply_cgate(s, Z_matrix, "Z", control, target)
+
 
 def C_H(s, control, target):
     apply_cgate(s, H_matrix, "H", control, target)
 
+
 def C_P(s, qubit):
     apply_cgate(s, P_matrix, "P", control, target)
 
+
 def C_T(s, qubit):
     apply_cgate(s, T_matrix, "T", control, target)
+
 
 def swap(s, qubit1, qubit2):
     if s.num_qubits > 1:
         CNOT(s, qubit1, qubit2)
         CNOT(s, qubit2, qubit1)
         CNOT(s, qubit1, qubit2)
+
 
 def Uf2(s, f_choice=random.randint(1, 4), qubit1=1, qubit2=2):
     if f_choice == 1:
@@ -167,20 +190,19 @@ def Uf2(s, f_choice=random.randint(1, 4), qubit1=1, qubit2=2):
             new_wire += "|"+" "*s.w
     s.update_circuit(new_wire)
 
-one_arg_gates = {}
-two_arg_gates = {}
 
-one_arg_gates['X'] = X
-one_arg_gates['Y'] = Y
-one_arg_gates['Z'] = Z
-one_arg_gates['H'] = H
-one_arg_gates['P'] = P
-one_arg_gates['T'] = T
-
-two_arg_gates['CNOT'] = CNOT
-two_arg_gates['C_Y'] = C_Y
-two_arg_gates['C_Z'] = C_Z
-two_arg_gates['C_H'] = C_H
-two_arg_gates['C_P'] = C_P
-two_arg_gates['C_T'] = C_T
-two_arg_gates['SWAP'] = swap
+gates_dict = {
+    'X' : {'func' : X, 'nargs' : 1},
+    'Y' : {'func' : Y, 'nargs' : 1},
+    'Z' : {'func' : Z, 'nargs' : 1},
+    'H' : {'func' : H, 'nargs' : 1},
+    'P' : {'func' : P, 'nargs' : 1},
+    'T' : {'func' : T, 'nargs' : 1},
+    'CNOT' : {'func' : CNOT, 'nargs' : 2},
+    'C_Y' : {'func' : C_Y, 'nargs' : 2},
+    'C_Z' : {'func' : C_Z, 'nargs' : 2},
+    'C_H' : {'func' : C_H, 'nargs' : 2},
+    'C_P' : {'func' : C_P, 'nargs' : 2},
+    'C_T' : {'func' : C_T, 'nargs' : 2},
+    'SWAP' : {'func' : swap, 'nargs' : 2},
+}
