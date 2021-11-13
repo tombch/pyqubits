@@ -14,3 +14,6 @@ import qcommands.execute
 import qcommands.delete
 import qcommands.keep
 import qcommands.verifiers
+import qcommands.list
+import qcommands.quit
+import qcommands.help

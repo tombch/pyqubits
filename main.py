@@ -9,7 +9,6 @@ import gates
 import qcommands
 from qcommands import verifiers as v
 from quantum_state import QuantumState
-from messages import help_message, error_message
 
 
 class ArgumentParserError(Exception):
@@ -88,6 +87,10 @@ def get_commands(parser, statements):
                         raise ArgumentParserError(msg, error_class='LogicEvaluatorError')      
                     if evaluated_x != None and not isinstance(evaluated_x, str):
                         command_args[i] = command_args[i].replace(x, str(evaluated_x))
+        keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
+        for i in range(len(command_args)):
+            if command_args[i] in keywords:
+                command_args[i] = "--" + command_args[i]
         try:
             command = parser.parse_args(command_args)
         except Exception as e: # TODO - change this exception handling
@@ -198,20 +201,28 @@ def execute_commands(parser, commands, env):
             except qcommands.timer.TimerCommandError as msg:
                 raise ArgumentParserError(msg, error_class='TimerCommandError') 
 
-        if command.list:
-            print(f"states: {list(env['states_dict'].keys())}")
-            print(f"measurements: {list(env['measurements_dict'].keys())}")
+        if command.list and is_single_command(command.list):
+            try:
+                env = qcommands.list.command(env, command.list[0])
+            except qcommands.list.ListCommandError as msg:
+                raise ArgumentParserError(msg, error_class='ListCommandError')             
 
-        if command.quit:
-            env['quit_program'] = True
+        if command.quit and is_single_command(command.quit):
+            try:
+                env = qcommands.quit.command(env, command.quit[0])
+            except qcommands.quit.QuitCommandError as msg:
+                raise ArgumentParserError(msg, error_class='QuitCommandError')
                         
         if command.help:
-            print(help_message)
+            try:
+                env = qcommands.help.command(env, command.help[0])
+            except qcommands.help.HelpCommandError as msg:
+                raise ArgumentParserError(msg, error_class='HelpCommandError')
 
     return env
 
 
-def main():
+def program():
     parser = ThrowingArgumentParser(allow_abbrev=False, add_help=False)
     g = parser.add_mutually_exclusive_group()
     g.add_argument('-n', '--new', nargs='+', action='append')
@@ -229,9 +240,9 @@ def main():
     g.add_argument('-f-e', '--for-each', nargs='+', action='append')
     g.add_argument('-e', '--execute', nargs=1, action='append') # TODO
     g.add_argument('-t', '--timer', nargs='+', action='append')
-    g.add_argument('-l', '--list', action='store_true') # TODO
-    g.add_argument('-q', '--quit', action='store_true') # TODO
-    g.add_argument('-h', '--help', action='store_true') # TODO
+    g.add_argument('-l', '--list', nargs='*', action='append')
+    g.add_argument('-q', '--quit', nargs='*', action='append')
+    g.add_argument('-h', '--help', nargs='*', action='append')
 
     env = {}
     env['states_dict'] = {}
@@ -243,8 +254,13 @@ def main():
     if sys.argv[1:]:
         for x in sys.argv[1:]:
             try:
+                start = time.time()
                 commands = get_commands(parser, f"--execute {x}")
                 env = execute_commands(parser, commands, env)
+                end = time.time()
+                if env['disp_time']:
+                    print("Time taken: " + str(end - start) + " seconds")
+
             except ArgumentParserError as e:
                 print(f"{e.error_class}: {e.message}")         
     else:
@@ -279,9 +295,4 @@ def main():
                     print("Time taken: " + str(end - start) + " seconds")
             except ArgumentParserError as e:
                 print(f"{e.error_class}: {e.message}")
-
     quit()
-
-
-if __name__ == '__main__':
-    main()

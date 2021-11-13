@@ -9,9 +9,9 @@ class ExecuteCommandError(Exception):
 
 def command(parser, env, command_args):
     file_name = command_args[0]
-    extension = ".clqc"
+    extension = ".qcmd"
     if file_name.endswith(extension):
-        file_name = file_name[:len(extension)+1]
+        file_name = file_name[:-len(extension)]
     try:
         with open(f"{file_name}{extension}", 'r') as file:
             script = file.read()

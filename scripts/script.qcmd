@@ -1,0 +1,24 @@
+timer show;
+for-each i (1, 9, 2) {
+    new q<i> .preset=zero;
+    new q<i+1> .preset=zero;
+    join q<i> q<i+1> .name=q<i>;
+    apply H q<i> 1;
+    apply CNOT q<i> [1, 2];
+}; 
+rename q<1> q;
+for-each i (3, 8, 2) {
+    join q q<i+2> .name=q;
+};
+new r .preset=one; measure r 1; apply X r 1; measure r 1; 
+join q r .name=q;
+keep .state q; 
+circuit q; state q;
+for-each i [1, 2, 5, 8, 6, 3] {
+    if-then {(i != 2) /\ (i != 6)}
+    {
+        measure q i;
+    };
+};
+keep .measurement q r;
+circuit q; state q;

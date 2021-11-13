@@ -99,20 +99,38 @@ def construct_int_list(q_list):
         return None
 
 
+def construct_float_list(q_list):
+    if q_list[0] != '[' or q_list[-1] != ']':
+        return None
+    else:
+        q_list = q_list[1:-1]
+    items = q_list.split(',')  
+    for i in range(len(items)):
+        try:
+            items[i] = int(items[i])    
+        except ValueError:
+            try:
+                items[i] = float(items[i])  
+            except ValueError:
+                return None
+    return items  
+
+
 def construct_range_list(str_tup):
     if str_tup[0] != '(' or str_tup[-1] != ')':
         return None
     else:
         str_tup = str_tup[1:-1]
     items = str_tup.split(',')
-    try:
-        for i in range(len(items)):
-            items[i] = int(items[i])
-            if items[i] < 0:
-                return None    
-        return items 
-    except ValueError:
+    if not (1 < len(items) < 4):
         return None
+    else:
+        try:
+            for i in range(len(items)):
+                items[i] = int(items[i])
+            return items 
+        except ValueError:
+            return None
     
     
 def indent_error(error):
