@@ -22,7 +22,9 @@ def command(env, command_args):
                 s_object = env['states_dict'][s]
                 g_num_args = env['gates_dict'][g]['nargs']
                 g_func = env['gates_dict'][g]['func']
-                if g_num_args > 1:
+                if g_num_args > s_object.num_qubits:
+                     raise ApplyCommandError(f"Gate {g} requires {g_num_args} qubits. State {s} only contains {s_object.num_qubits} qubit(s).")
+                elif g_num_args > 1:
                     for q_list in qubits:
                         q_list_object = v.construct_int_list(q_list)
                         if q_list_object == None or not v.is_valid_qubit_list_of_state(q_list_object, s_object):
@@ -34,7 +36,7 @@ def command(env, command_args):
                 else:
                     for q in qubits:
                         if not v.is_valid_qubit_of_state(q, s_object):
-                            raise ApplyCommandError(f"Invalid reference of qubit in state {s}: {q}. Must be an integer > 0.")
+                            raise ApplyCommandError(f"Invalid reference of qubit in state {s}: {q}. Must be an integer > 0 and within the number of qubits in {s}.")
                         else:
                             g_func(s_object, int(q))
     return env

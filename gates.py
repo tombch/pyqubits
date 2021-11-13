@@ -24,7 +24,7 @@ U_f_matrix_4 = np.array([[1+0j, 0+0j, 0+0j, 0+0j], [0+0j, 1+0j, 0+0j, 0+0j], [0+
 # Functions for manipulating quantum states
 def apply_gate(s, chosen_matrix, gate_char, qubit=1):
     # TODO: handle cases like qubit being a string
-    # Currently unnecessary as it is filtered out by the parser and command modules
+    # Currently unnecessary as it is filtered out by the command modules
     # But will need doing if gates becomes a standalone module
     # if not isinstance(qubit, int):
     #     raise GateError(f"{s.state_name}: qubit {qubit} is not an integer")

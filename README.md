@@ -9,14 +9,16 @@ For dependencies see `requirements.txt`. Once necessary requirements are install
 ### Create a Bell State
 ```
 Welcome to QCmd, a terminal-based quantum computing simulator. 
-Enter --help or -h for more information. To quit the program, enter --quit or -q.
+To see a list of available commands, enter '-' and then press tab twice.
+Enter 'help' or '-h' for more information regarding commands.
+To quit the program, enter 'quit' or '-q'.
 
-#~: --new q .qubits=2 .preset=zero
-#~: --state q
+#~: new q .qubits=2 .preset=zero
+#~: state q
 State vector for q [0]:
  q = (1+0j) |00>
-#~: --apply H q 1; --apply CNOT q [1, 2]
-#~: --rename q bellstate; --circuit bellstate; --state bellstate; --probs bellstate
+#~: apply H q 1; apply CNOT q [1, 2]
+#~: rename q bellstate; circuit bellstate; state bellstate; probs bellstate;
 Circuit diagram for bellstate:
  1   2   
  |   |      [0]
@@ -37,37 +39,49 @@ Probability distribution for bellstate [2]:
 
 ### Quantum Teleportation
 ```
-Welcome to my terminal-based quantum computing simulator.
-Enter --help or -h for more information. To quit the program, enter --quit or -q.
+Welcome to QCmd, a terminal-based quantum computing simulator. 
+To see a list of available commands, enter '-' and then press tab twice.
+Enter 'help' or '-h' for more information regarding commands.
+To quit the program, enter 'quit' or '-q'.
 
-#~: --timer on | --new q | --new bellstate num_qubits=2 state=zero | --apply H bellstate 1 | --apply CNOT bellstate [1,2] | --state q bellstate | --join q bellstate name=qb | --apply CNOT qb [1,2] | --apply H qb 1 | --measure qb 1 2 make_vars | --if-then {qb.2 == 1} {--apply X qb 3} | --if-then {qb.1 == 1} {--apply Z qb 3} | --circuit qb | --state qb
+#~: new q; new bellstate .qubits=2 .preset=zero
+#~: apply H bellstate 1; apply CNOT bellstate [1, 2]
+#~: state q bellstate
 State vector for q [0]:
-q = (-0.4774612308992416+0.2899719001617376j) |0>
-  + (0.5693502316014901-0.6031478955282047j) |1>
+ q = (0.4632710258963568-0.2885929261268142j) |0>
+   + (-0.0068189777999385-0.8378827967539757j) |1>
 State vector for bellstate [2]:
-bellstate = (0.7071067811865475+0j) |00>
-          + (0.7071067811865475+0j) |11>
+ bellstate = (0.7071067811865475+0j) |00>
+           + (0.7071067811865475+0j) |11>
+#~: join q bellstate .name=qb
+#~: apply CNOT qb [1, 2]; apply H qb 1
+#~: measure qb 1 2
+#~: if-then {qb.2.m1 == 1} {apply X qb 3} 
+#~: if-then {qb.1.m1 == 1} {apply Z qb 3}
+#~: circuit qb; state qb
 Circuit diagram for qb:
- 1   2   3
+ 1   2   3   
  |   |   |      [0]
- |   H   |
+ |   H   |   
  |   |   |      [1]
- |   O---X
+ |   O---X   
  |   |   |      [2]
- O---X   |
+ O---X   |   
  |   |   |      [3]
- H   |   |
+ H   |   |   
  |   |   |      [4]
- M===|===|===0
+ M=1 |   |   
  |   |   |      [5]
- |   M===|===1
+ |   M=1 |   
  |   |   |      [6]
- |   |   X
+ |   |   X   
  |   |   |      [7]
-State vector for qb [7]:
-qb = (-0.4774612308992416+0.2899719001617375j) |010>
-   + (0.56935023160149-0.6031478955282046j) |011>
-Time taken: 0.030252456665039062 seconds
+ |   |   Z   
+ |   |   |      [8]
+State vector for qb [8]:
+ qb = (0.4632710258963568-0.2885929261268142j) |110>
+    + (-0.0068189777999385-0.8378827967539757j) |111>
+#~: 
 ```
 
 ## How to use
@@ -82,7 +96,7 @@ This program has various commands that can be used to simulate quantum circuits.
 ...
 ```
 
- or on a single line (separated by semicolons), where upon pressing enter, they are executed from left to right:
+or on a single line (separated by semicolons), where upon pressing enter, they are executed from left to right:
 
 ```
 #~: command4; command5; command6; ...
@@ -92,13 +106,13 @@ If an error occurs while executing a series of commands entered on the same line
 For example, if `command6` in the above line causes an error, any changes that `command4` and `command5` made to the environment of the program will not be saved.
 
 ### Running Scripts
-QCmd can execute a script within the program (using the `--execute` command):
+QCmd can execute scripts within the program (using the `execute` command):
 
 ```
-#~: --execute script
+#~: execute script1 script2 ...
 ```
 
-or it can execute multiple scripts from the command line when initially running the program:
+or it can independently execute multiple scripts passed as arguments to the program:
 
 ```
 python -m qcmd script1 script2 ...

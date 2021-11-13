@@ -8,7 +8,7 @@ class IfThenCommandError(Exception):
     pass
 
 
-def command(parser, env, command_args):
+def command(env, command_args):
     if len(command_args) != 2:
         raise IfThenCommandError(f"Expected exactly two arguments.")
     else:
@@ -27,8 +27,8 @@ def command(parser, env, command_args):
                 raise IfThenCommandError(f"While executing if-then statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{v.indent_error(str(msg))}")
             try:
                 if execute_then_statements == True:
-                    commands = main.get_commands(parser, then_statements)
-                    env = main.execute_commands(parser, commands, env)
+                    commands = main.get_commands(then_statements)
+                    env = main.execute_commands(commands, env)
                 elif execute_then_statements == False:
                     pass
                 else:

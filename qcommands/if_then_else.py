@@ -8,7 +8,7 @@ class IfThenElseCommandError(Exception):
     pass
 
 
-def command(parser, env, command_args):
+def command(env, command_args):
     if len(command_args) != 3:
         raise IfThenElseCommandError(f"Expected exactly three arguments.")
     else:
@@ -31,11 +31,11 @@ def command(parser, env, command_args):
                 raise IfThenElseCommandError(f"While executing if-then-else statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{v.indent_error(str(msg))}")
             try:
                 if execute_then_statements == True:
-                    commands = main.get_commands(parser, then_statements)
-                    env = main.execute_commands(parser, commands, env)
+                    commands = main.get_commands(then_statements)
+                    env = main.execute_commands(commands, env)
                 elif execute_then_statements == False:
-                    commands = main.get_commands(parser, else_statements)
-                    env = main.execute_commands(parser, commands, env)
+                    commands = main.get_commands(else_statements)
+                    env = main.execute_commands(commands, env)
                 else:
                     raise IfThenElseCommandError("If condition did not evaluate to either True or False.")
             except ArgumentParserError as e:

@@ -1,7 +1,6 @@
 import readline
 import sys
 import time
-import argparse
 import re
 import copy
 import logic_evaluator
@@ -16,11 +15,6 @@ class ArgumentParserError(Exception):
     def __init__(self, message, error_class=None):
         self.message = message
         self.error_class = error_class
-
-
-class ThrowingArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
-        raise ArgumentParserError(message)
 
 
 def regroup(split_statement, left_char, right_char, split_char=""):
@@ -57,7 +51,8 @@ def regroup(split_statement, left_char, right_char, split_char=""):
     return regrouped_expressions
 
 
-def get_commands(parser, statements):
+def get_commands(statements):
+    keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
     statements = statements.replace('\n', ' ')
     statements = statements.replace("{", " { ")
     statements = statements.replace("}", " } ")
@@ -73,206 +68,101 @@ def get_commands(parser, statements):
     for statement in statements:
         # Split the current statement on empty space
         split_statement = statement.split()
-        command_args = regroup(split_statement, "{", "}", split_char=" ")
-        command_args = regroup(command_args, "[", "]", split_char=" ")
-        command_args = regroup(command_args, "(", ")", split_char=" ")
-        command_args = regroup(command_args, "<", ">", split_char=" ")
-        for i in range(len(command_args)):
-            if not v.is_code_block(command_args[i]):
-                logic_strings = re.findall('<.*?>', command_args[i])
-                for x in logic_strings:
-                    try:
-                        evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
-                    except logic_evaluator.LogicEvaluatorError as msg:
-                        raise ArgumentParserError(msg, error_class='LogicEvaluatorError')      
-                    if evaluated_x != None and not isinstance(evaluated_x, str):
-                        command_args[i] = command_args[i].replace(x, str(evaluated_x))
-        keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
-        for i in range(len(command_args)):
-            if command_args[i] in keywords:
-                command_args[i] = "--" + command_args[i]
-        try:
-            command = parser.parse_args(command_args)
-        except Exception as e: # TODO - change this exception handling
-            e_message = str(e) # Very hacky, argparse probably needs to go
-            e_message= e_message[0].upper() + e_message[1:]
-            raise ArgumentParserError(e_message, error_class='ArgumentParserError')
-        commands.append(command)
+        # Avoiding empty lists
+        if split_statement:
+            command_args = regroup(split_statement, "{", "}", split_char=" ")
+            command_args = regroup(command_args, "[", "]", split_char=" ")
+            command_args = regroup(command_args, "(", ")", split_char=" ")
+            command_args = regroup(command_args, "<", ">", split_char=" ")
+            for i in range(len(command_args)):
+                if not v.is_code_block(command_args[i]):
+                    logic_strings = re.findall('<.*?>', command_args[i])
+                    for x in logic_strings:
+                        try:
+                            evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
+                        except logic_evaluator.LogicEvaluatorError as msg:
+                            raise ArgumentParserError(msg, error_class='LogicEvaluatorError')      
+                        if evaluated_x != None and not isinstance(evaluated_x, str):
+                            command_args[i] = command_args[i].replace(x, str(evaluated_x))
+            command = {}
+            for i in range(len(keywords)):
+                if command_args[0] == keywords[i]:
+                    command = {'cmd' : keywords[i], 'args' : command_args[1:]}
+                    break
+            if not command:
+                raise ArgumentParserError(f"Unrecognised command: {command_args[0]}", error_class='ArgumentParserError')
+            for i in range(1, len(command_args)):
+                if command_args[i] in keywords:
+                    raise ArgumentParserError(f"Command {command_args[i]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')
+            commands.append(command)
     return commands
 
 
-def is_single_command(command_obj):
-    if len(command_obj) != 1:
-        raise ArgumentParserError("Argument cannot be used twice in one command (should be separated by ';')", error_class='ArgumentParserError')
-    else:
-        return True
-
-
-def execute_commands(parser, commands, env):
+def execute_commands(commands, env):
+    keywords = {
+        'new' : {'func' : qcommands.new.command, 'error' : qcommands.new.NewCommandError, 'error_name' : 'NewCommandError'},
+        'join' : {'func' : qcommands.join.command, 'error' : qcommands.join.JoinCommandError, 'error_name' : 'JoinCommandError'},
+        'rename' : {'func' : qcommands.rename.command, 'error' : qcommands.rename.RenameCommandError, 'error_name' : 'RenameCommandError'},
+        'delete' : {'func' : qcommands.delete.command, 'error' : qcommands.delete.DeleteCommandError, 'error_name' : 'DeleteCommandError'},
+        'keep' : {'func' : qcommands.keep.command, 'error' : qcommands.keep.KeepCommandError, 'error_name' : 'KeepCommandError'},
+        'apply' : {'func' : qcommands.apply.command, 'error' : qcommands.apply.ApplyCommandError, 'error_name' : 'ApplyCommandError'},
+        'measure' : {'func' : qcommands.measure.command, 'error' : qcommands.measure.MeasureCommandError, 'error_name' : 'MeasureCommandError'},
+        'state' : {'func' : qcommands.state.command, 'error' : qcommands.state.StateCommandError, 'error_name' : 'StateCommandError'},
+        'circuit' : {'func' : qcommands.circuit.command, 'error' : qcommands.circuit.CircuitCommandError, 'error_name' : 'CircuitCommandError'},
+        'probs' : {'func' : qcommands.probs.command, 'error' : qcommands.probs.ProbabilitiesCommandError, 'error_name' : 'ProbabilitiesCommandError'},
+        'if-then' : {'func' : qcommands.if_then.command, 'error' : qcommands.if_then.IfThenCommandError, 'error_name' : 'IfThenCommandError'},
+        'if-then-else' : {'func' : qcommands.if_then_else.command, 'error' : qcommands.if_then_else.IfThenElseCommandError, 'error_name' : 'IfThenElseCommandError'},
+        'for-each' : {'func' : qcommands.for_each.command, 'error' : qcommands.for_each.ForEachCommandError, 'error_name' : 'ForEachCommandError'},
+        'execute' : {'func' : qcommands.execute.command, 'error' : qcommands.execute.ExecuteCommandError, 'error_name' : 'ExecuteCommandError'},
+        'timer' : {'func' : qcommands.timer.command, 'error' : qcommands.timer.TimerCommandError, 'error_name' : 'TimerCommandError'},
+        'list' : {'func' : qcommands.list.command, 'error' : qcommands.list.ListCommandError, 'error_name' : 'ListCommandError'},
+        'quit' : {'func' : qcommands.quit.command, 'error' : qcommands.quit.QuitCommandError, 'error_name' : 'QuitCommandError'},
+        'help' : {'func' : qcommands.help.command, 'error' : qcommands.help.HelpCommandError, 'error_name' : 'HelpCommandError'},
+    }
     env = copy.deepcopy(env)
     for command in commands:
-        if command.new and is_single_command(command.new):
-            try:
-                env = qcommands.new.command(env, command.new[0])
-            except qcommands.new.NewCommandError as msg:
-                raise ArgumentParserError(msg, error_class='NewCommandError')
-
-        if command.join and is_single_command(command.join):           
-            try:
-                env = qcommands.join.command(env, command.join[0])
-            except qcommands.join.JoinCommandError as msg:
-                raise ArgumentParserError(msg, error_class='JoinCommandError')          
-
-        if command.rename and is_single_command(command.rename):
-            try:
-                env = qcommands.rename.command(env, command.rename[0])
-            except qcommands.rename.RenameCommandError as msg:
-                raise ArgumentParserError(msg, error_class='RenameCommandError')  
-
-        if command.delete and is_single_command(command.delete):
-            try:
-                env = qcommands.delete.command(env, command.delete[0])
-            except qcommands.delete.DeleteCommandError as msg:
-                raise ArgumentParserError(msg, error_class='DeleteCommandError')
-
-        if command.keep and is_single_command(command.keep):
-            try:
-                env = qcommands.keep.command(env, command.keep[0])
-            except qcommands.keep.KeepCommandError as msg:
-                raise ArgumentParserError(msg, error_class='KeepCommandError')
-
-        if command.apply and is_single_command(command.apply):
-            try:
-                env = qcommands.apply.command(env, command.apply[0])
-            except qcommands.apply.ApplyCommandError as msg:
-                raise ArgumentParserError(msg, error_class='ApplyCommandError')          
-
-        if command.measure and is_single_command(command.measure):
-            try:
-                env = qcommands.measure.command(env, command.measure[0])
-            except qcommands.measure.MeasureCommandError as msg:
-                raise ArgumentParserError(msg, error_class='MeasureCommandError')  
-
-        if command.state and is_single_command(command.state):
-            try:
-                env = qcommands.state.command(env, command.state[0])
-            except qcommands.state.StateCommandError as msg:
-                raise ArgumentParserError(msg, error_class='StateCommandError')
-                
-        if command.circuit and is_single_command(command.circuit):
-            try:
-                env = qcommands.circuit.command(env, command.circuit[0])
-            except qcommands.circuit.CircuitCommandError as msg:
-                raise ArgumentParserError(msg, error_class='CircuitCommandError')
-                
-        if command.probs and is_single_command(command.probs):
-            try:
-                env = qcommands.probs.command(env, command.probs[0])
-            except qcommands.probs.ProbabilitiesCommandError as msg:
-                raise ArgumentParserError(msg, error_class='ProbabilitiesCommandError')
-
-        if command.if_then and is_single_command(command.if_then):
-            try:
-                env = qcommands.if_then.command(parser, env, command.if_then[0])
-            except qcommands.if_then.IfThenCommandError as msg:
-                raise ArgumentParserError(msg, error_class='IfThenCommandError') 
-
-        if command.if_then_else and is_single_command(command.if_then_else):
-            try:
-                env = qcommands.if_then_else.command(parser, env, command.if_then_else[0])
-            except qcommands.if_then_else.IfThenElseCommandError as msg:
-                raise ArgumentParserError(msg, error_class='IfThenElseCommandError')
-
-        if command.for_each and is_single_command(command.for_each):
-            try:
-                env = qcommands.for_each.command(parser, env, command.for_each[0])
-            except qcommands.for_each.ForEachCommandError as msg:
-                raise ArgumentParserError(msg, error_class='ForEachCommandError')
-
-        if command.execute and is_single_command(command.execute):
-            try:
-                env = qcommands.execute.command(parser, env, command.execute[0])
-            except qcommands.execute.ExecuteCommandError as msg:
-                raise ArgumentParserError(msg, error_class='ExecuteCommandError')
-
-        if command.timer and is_single_command(command.timer):
-            try:
-                env = qcommands.timer.command(env, command.timer[0])
-            except qcommands.timer.TimerCommandError as msg:
-                raise ArgumentParserError(msg, error_class='TimerCommandError') 
-
-        if command.list and is_single_command(command.list):
-            try:
-                env = qcommands.list.command(env, command.list[0])
-            except qcommands.list.ListCommandError as msg:
-                raise ArgumentParserError(msg, error_class='ListCommandError')             
-
-        if command.quit and is_single_command(command.quit):
-            try:
-                env = qcommands.quit.command(env, command.quit[0])
-            except qcommands.quit.QuitCommandError as msg:
-                raise ArgumentParserError(msg, error_class='QuitCommandError')
-                        
-        if command.help:
-            try:
-                env = qcommands.help.command(env, command.help[0])
-            except qcommands.help.HelpCommandError as msg:
-                raise ArgumentParserError(msg, error_class='HelpCommandError')
-
+        try:
+            env = keywords[command['cmd']]['func'](env, command['args'])
+        except keywords[command['cmd']]['error'] as msg:
+            raise ArgumentParserError(msg, error_class=keywords[k]['error_name'])
     return env
 
 
 def program():
-    parser = ThrowingArgumentParser(allow_abbrev=False, add_help=False)
-    g = parser.add_mutually_exclusive_group()
-    g.add_argument('-n', '--new', nargs='+', action='append')
-    g.add_argument('-j', '--join', nargs='+', action='append')
-    g.add_argument('-r', '--rename', nargs='+', action='append')
-    g.add_argument('-d', '--delete', nargs='+', action='append') # TODO
-    g.add_argument('-k', '--keep', nargs='+', action='append') # TODO
-    g.add_argument('-a', '--apply', nargs='+', action='append')
-    g.add_argument('-m', '--measure', nargs='+', action='append')
-    g.add_argument('-s', '--state', nargs='+', action='append')
-    g.add_argument('-c', '--circuit', nargs='+', action='append')
-    g.add_argument('-p', '--probs', nargs='+', action='append')
-    g.add_argument('-i-t', '--if-then', nargs='+', action='append')
-    g.add_argument('-i-t-e', '--if-then-else', nargs='+', action='append')
-    g.add_argument('-f-e', '--for-each', nargs='+', action='append')
-    g.add_argument('-e', '--execute', nargs=1, action='append') # TODO
-    g.add_argument('-t', '--timer', nargs='+', action='append')
-    g.add_argument('-l', '--list', nargs='*', action='append')
-    g.add_argument('-q', '--quit', nargs='*', action='append')
-    g.add_argument('-h', '--help', nargs='*', action='append')
-
     env = {}
     env['states_dict'] = {}
     env['measurements_dict'] = {}
     env['gates_dict'] = gates.gates_dict
     env['disp_time'] = False
     env['quit_program'] = False
-
     if sys.argv[1:]:
         for x in sys.argv[1:]:
             try:
                 start = time.time()
-                commands = get_commands(parser, f"--execute {x}")
-                env = execute_commands(parser, commands, env)
+                commands = get_commands(f"execute {x}")
+                env = execute_commands(commands, env)
                 end = time.time()
                 if env['disp_time']:
                     print("Time taken: " + str(end - start) + " seconds")
-
+                # Clear environment
+                env = {}
+                env['states_dict'] = {}
+                env['measurements_dict'] = {}
+                env['gates_dict'] = gates.gates_dict
+                env['disp_time'] = False
+                env['quit_program'] = False
             except ArgumentParserError as e:
-                print(f"{e.error_class}: {e.message}")         
+                print(f"{e.error_class}: {e.message}")                                  
     else:
-        print("Welcome to QCmd, a terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.\n")
+        print("Welcome to QCmd, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '-' and then press tab twice.\nEnter 'help' or '-h' for more information regarding commands.\nTo quit the program, enter 'quit' or '-q'.\n")
         readline.parse_and_bind("tab: complete")
         old_delims = readline.get_completer_delims()
         readline.set_completer_delims(old_delims.replace('-', ''))
         while not env['quit_program']:
             try:      
                 def completer(text, state):
-                    arguments = ['--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', '--probs', 
-                                '--apply', '--measure', '--timer', '--if-then', '--if-then-else', '--for-each', '--execute', '--list', '--quit', '--help', 
+                    arguments = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help',
+                                '--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', '--probs', '--apply', '--measure', '--timer', '--if-then', '--if-then-else', '--for-each', '--execute', '--list', '--quit', '--help',
                                 '.qs=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements',
                                 '-n', '-j', '-r', '-d', '-k', '-a', '-m', '-s', '-c', '-p', '-i-t', '-i-t-e', '-f-e', '-e', '-t', '-l', '-q', '-h']
                     arguments += env['states_dict'].keys()
@@ -287,9 +177,9 @@ def program():
                 statements = input('#~: ')
                 start = time.time()
                 # Parse the current statement(s) and return command(s) that can be acted on
-                commands = get_commands(parser, statements)
+                commands = get_commands(statements)
                 # Execute the current command(s), and return env
-                env = execute_commands(parser, commands, env)
+                env = execute_commands(commands, env)
                 end = time.time()
                 if env['disp_time']:
                     print("Time taken: " + str(end - start) + " seconds")

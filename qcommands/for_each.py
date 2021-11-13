@@ -8,7 +8,7 @@ class ForEachCommandError(Exception):
     pass
 
 
-def command(parser, env, command_args):
+def command(env, command_args):
     if len(command_args) != 3:
         raise ForEachCommandError(f"Expected exactly three arguments.")
     else:
@@ -42,8 +42,8 @@ def command(parser, env, command_args):
                         for_statements_i = for_statements_i.replace(pattern, replacement)
                     try:
                         env['measurements_dict'][i_arg] = i
-                        commands = main.get_commands(parser, for_statements_i)
-                        env = main.execute_commands(parser, commands, env)
+                        commands = main.get_commands(for_statements_i)
+                        env = main.execute_commands(commands, env)
                         env['measurements_dict'].pop(i_arg)
                     except ArgumentParserError as e:
                         raise ForEachCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")     
