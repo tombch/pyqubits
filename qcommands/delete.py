@@ -46,16 +46,16 @@ def command(env, command_args):
                 del env['states_dict'][s]
     # Remove all measurements from the environment if instructed
     if delete_all_measurements:
-        objects_to_delete = list(env['vars_dict'].keys())
+        objects_to_delete = list(env['measurements_dict'].keys())
         for v in objects_to_delete:
-            del env['vars_dict'][v]
+            del env['measurements_dict'][v]
     # Otherwise, remove specified measurements
     elif delete_type in delete_measurement_options:
         for s in objects_to_delete:
             measurements_to_delete = []
-            for v in env['vars_dict']:
+            for v in env['measurements_dict']:
                 if v.startswith(f'{s}.'):
                     measurements_to_delete.append(v)
             for v in measurements_to_delete:
-                del env['vars_dict'][v]
+                del env['measurements_dict'][v]
     return env

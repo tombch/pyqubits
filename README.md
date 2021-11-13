@@ -1,40 +1,38 @@
-# Command-line quantum computing simulator
+# QCmd - Command-line quantum computing simulator
 ## Introduction \& Requirements
-A python program for quantum computing simulations.
+QCmd is a python program for quantum computing simulations in your terminal.
 
 For dependencies see `requirements.txt`. Once necessary requirements are installed, enter `python main.py` to run the program.
-
 
 ## Things you can do
 
 ### Create a Bell State
 ```
-Welcome to my terminal-based quantum computing simulator.
+Welcome to QCmd, a terminal-based quantum computing simulator. 
 Enter --help or -h for more information. To quit the program, enter --quit or -q.
 
-#~: --new q num_qubits=2 state=zero
+#~: --new q .qubits=2 .preset=zero
 #~: --state q
 State vector for q [0]:
-q = (1+0j) |00>
-#~: --apply H q 1 | --apply CNOT q [1, 2]
-#~: --rename q bellstate
-#~: --circuit bellstate | --state bellstate | --probs bellstate
+ q = (1+0j) |00>
+#~: --apply H q 1; --apply CNOT q [1, 2]
+#~: --rename q bellstate; --circuit bellstate; --state bellstate; --probs bellstate
 Circuit diagram for bellstate:
- 1   2
+ 1   2   
  |   |      [0]
- H   |
+ H   |   
  |   |      [1]
- O---X
+ O---X   
  |   |      [2]
 State vector for bellstate [2]:
-bellstate = (0.7071067811865475+0j) |00>
-          + (0.7071067811865475+0j) |11>
-Probabilities for bellstate [2]:
- 00     0.5     =========================
- 01     0.0
- 10     0.0
- 11     0.5     =========================
-#~:
+ bellstate = (0.7071067811865475+0j) |00>
+           + (0.7071067811865475+0j) |11>
+Probability distribution for bellstate [2]:
+ 00	0.5	=========================
+ 01	0.0	
+ 10	0.0	
+ 11	0.5	=========================
+#~: 
 ```
 
 ### Quantum Teleportation
@@ -76,21 +74,35 @@ Time taken: 0.030252456665039062 seconds
 
 ### Executing Commands
 This program has various commands that can be used to simulate quantum circuits. These commands can either be entered and executed line-by-line:
+
 ```
-#~: command_1
-#~: command_2
-#~: command_3
+#~: command1
+#~: command2
+#~: command3
 ...
 ```
 
- or on a single line, where upon pressing enter, they are executed from left to right (via the use of pipes):
-```
-#~: command1 | command2 | command3 | ...
-``` 
-The pipes are necessary for executing multiple commands on a single line. For details on the available commands, see further below.
+ or on a single line (separated by semicolons), where upon pressing enter, they are executed from left to right:
 
-### Conditions
-Work in progress.
+```
+#~: command4; command5; command6; ...
+``` 
+If an error occurs while executing a series of commands entered on the same line, the program will fall back to its state before attempting to execute that line.
+
+For example, if `command6` in the above line causes an error, any changes that `command4` and `command5` made to the environment of the program will not be saved.
+
+### Running Scripts
+QCmd can execute a script within the program (using the `--execute` command):
+
+```
+#~: --execute script
+```
+
+or it can execute multiple scripts from the command line when initially running the program:
+
+```
+python -m qcmd script1 script2 ...
+```
 
 ## Command List
 ### `-n`, `--new`

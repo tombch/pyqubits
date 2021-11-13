@@ -8,7 +8,7 @@ class ApplyCommandError(Exception):
 
 def command(env, command_args):
     if len(command_args) < 3:
-        raise ApplyCommandError(f"Expected at least 3 arguments.")
+        raise ApplyCommandError(f"Expected at least three arguments.")
     else:
         g = command_args[0]
         s = command_args[1]

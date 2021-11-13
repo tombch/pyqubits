@@ -1,7 +1,9 @@
 import operator
 
+
 class LogicEvaluatorError(Exception):
     pass
+
 
 env = {
     'and' : {'symbol' : '/\\', 'value': operator.__and__, 'nargs' : 2},
@@ -24,6 +26,7 @@ env = {
     'F' : {'symbol' : 'F', 'value' : False, 'nargs' : 0},
 }
 
+
 def get_tokens(user_input):
     for k in env.keys():
         if env[k]['nargs'] > 0:
@@ -32,6 +35,7 @@ def get_tokens(user_input):
     user_input = user_input.replace(')', ' ) ')
     tokens = user_input.split()
     return tokens
+
 
 def get_expression(tokens, sub_expr_count=0):
     i = 0
@@ -67,15 +71,17 @@ def get_expression(tokens, sub_expr_count=0):
                         env[tokens[i]] = {'symbol' : tokens[i], 'value' : float(tokens[i]), 'nargs' : 0}
                         expression.append(tokens[i])
                     except ValueError:
-                        env[tokens[i]] = {'symbol' : tokens[i], 'value' : str(tokens[i]), 'nargs' : 0}
-                        expression.append(tokens[i])
+                        raise LogicEvaluatorError(f"Unrecognised value: {tokens[i]}")
+                        # env[tokens[i]] = {'symbol' : tokens[i], 'value' : str(tokens[i]), 'nargs' : 0}
+                        # expression.append(tokens[i])
         i += 1    
     if tokens.count('(') < tokens.count(')'):
         raise LogicEvaluatorError("Syntax error: Missing opening '('")
     elif tokens.count('(') > tokens.count(')'):
         raise LogicEvaluatorError("Syntax error: Missing closing ')'")
     return expression, i, sub_expr_count
-        
+
+
 def evaluate(expr, accept_type_errors=False):
     try:
         if not isinstance(expr, list):
@@ -113,19 +119,23 @@ def evaluate(expr, accept_type_errors=False):
     except ZeroDivisionError:
         raise LogicEvaluatorError('Attempted division by zero')
 
+
 def interpret(user_input, user_env=None, accept_type_errors=False):
     if user_env is not None:
-        env.update(user_env)
+        for k in user_env.keys():
+            env.update({k : {'symbol' : k, 'value' : user_env[k], 'nargs' : 0}})   
     condition = evaluate(get_expression(get_tokens(user_input))[0], accept_type_errors)
     return condition
 
-def main():
-    while True:
-        try: 
-            user_input = input('> ')
-            print(interpret(user_input))
-        except LogicEvaluatorError as msg:
-            print(f"LogicEvaluatorError: {msg}")
 
-if __name__ == '__main__':
-    main()
+# def main():
+#     while True:
+#         try: 
+#             user_input = input('> ')
+#             print(interpret(user_input))
+#         except LogicEvaluatorError as msg:
+#             print(f"LogicEvaluatorError: {msg}")
+
+
+# if __name__ == '__main__':
+#     main()

@@ -1,4 +1,5 @@
 import readline
+import sys
 import time
 import argparse
 import re
@@ -6,6 +7,7 @@ import copy
 import logic_evaluator
 import gates
 import qcommands
+from qcommands import verifiers as v
 from quantum_state import QuantumState
 from messages import help_message, error_message
 
@@ -50,9 +52,9 @@ def regroup(split_statement, left_char, right_char, split_char=""):
             current_statement += split_statement[i] + split_char
         i += 1
     if open_expr > 0:
-        raise ArgumentParserError(f"incorrect syntax: missing '{right_char}'")  
+        raise ArgumentParserError(f"Incorrect syntax: missing '{right_char}' to close expression.",  error_class='ArgumentParserError')
     elif open_expr < 0:
-        raise ArgumentParserError(f"incorrect syntax: missing '{left_char}'")
+        raise ArgumentParserError(f"Incorrect syntax: missing '{left_char}' to close expression.",  error_class='ArgumentParserError')
     return regrouped_expressions
 
 
@@ -77,22 +79,28 @@ def get_commands(parser, statements):
         command_args = regroup(command_args, "(", ")", split_char=" ")
         command_args = regroup(command_args, "<", ">", split_char=" ")
         for i in range(len(command_args)):
-            logic_strings = re.findall('<.*?>', command_args[i])
-            for x in logic_strings:
-                try:
-                    evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
-                except logic_evaluator.LogicEvaluatorError as msg:
-                    raise ArgumentParserError(msg)         
-                if evaluated_x != None and not isinstance(evaluated_x, str):
-                    command_args[i] = command_args[i].replace(x, str(evaluated_x))
-        command = parser.parse_args(command_args)
+            if not v.is_code_block(command_args[i]):
+                logic_strings = re.findall('<.*?>', command_args[i])
+                for x in logic_strings:
+                    try:
+                        evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
+                    except logic_evaluator.LogicEvaluatorError as msg:
+                        raise ArgumentParserError(msg, error_class='LogicEvaluatorError')      
+                    if evaluated_x != None and not isinstance(evaluated_x, str):
+                        command_args[i] = command_args[i].replace(x, str(evaluated_x))
+        try:
+            command = parser.parse_args(command_args)
+        except Exception as e: # TODO - change this exception handling
+            e_message = str(e) # Very hacky, argparse probably needs to go
+            e_message= e_message[0].upper() + e_message[1:]
+            raise ArgumentParserError(e_message, error_class='ArgumentParserError')
         commands.append(command)
     return commands
 
 
 def is_single_command(command_obj):
     if len(command_obj) != 1:
-        raise ArgumentParserError(error_message['too many commands'])
+        raise ArgumentParserError("Argument cannot be used twice in one command (should be separated by ';')", error_class='ArgumentParserError')
     else:
         return True
 
@@ -192,7 +200,7 @@ def execute_commands(parser, commands, env):
 
         if command.list:
             print(f"states: {list(env['states_dict'].keys())}")
-            print(f"measurements: {list(env['vars_dict'].keys())}")
+            print(f"measurements: {list(env['measurements_dict'].keys())}")
 
         if command.quit:
             env['quit_program'] = True
@@ -203,75 +211,74 @@ def execute_commands(parser, commands, env):
     return env
 
 
-def completer(text, state):
-    arguments = ['--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', 
-                 '--probs', '--apply', '--measure', '--timer', '--if-then', '--if-then-else', 
-                 '--for-each', '--execute', '--list', '--quit', '--help', 
-                 '.qs=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements']
-    options = [i for i in arguments if len(text) > 0 and i.startswith(text)]
-    if state < len(options):
-        return options[state]
-    else:
-        return None
-
-
 def main():
-    print("Welcome to my terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.\n")
-    readline.parse_and_bind("tab: complete")
-    old_delims = readline.get_completer_delims()
-    readline.set_completer_delims(old_delims.replace('-', ''))
-    readline.set_completer(completer)
     parser = ThrowingArgumentParser(allow_abbrev=False, add_help=False)
     g = parser.add_mutually_exclusive_group()
-    g.add_argument('-n', '--new', nargs='+', action='append') # DONE
-    g.add_argument('-j', '--join', nargs='+', action='append') # DONE
-    g.add_argument('-r', '--rename', nargs=2, action='append') # DONE
+    g.add_argument('-n', '--new', nargs='+', action='append')
+    g.add_argument('-j', '--join', nargs='+', action='append')
+    g.add_argument('-r', '--rename', nargs='+', action='append')
     g.add_argument('-d', '--delete', nargs='+', action='append') # TODO
     g.add_argument('-k', '--keep', nargs='+', action='append') # TODO
-    g.add_argument('-a', '--apply', nargs='+', action='append') # DONE
-    g.add_argument('-m', '--measure', nargs='+', action='append') # DONE
-    g.add_argument('-s', '--state', nargs='+', action='append') # DONE
-    g.add_argument('-c', '--circuit', nargs='+', action='append') # DONE
-    g.add_argument('-p', '--probs', nargs='+', action='append') # DONE
-    g.add_argument('-i-t', '--if-then', nargs=2, action='append') # DONE
-    g.add_argument('-i-t-e', '--if-then-else', nargs=3, action='append') # DONE
-    g.add_argument('-f-e', '--for-each', nargs=3, action='append') # TODO
-    g.add_argument('-e', '--execute', nargs=1, action='append') # DONE
-    g.add_argument('-t', '--timer', nargs=1, action='append') # DONE
+    g.add_argument('-a', '--apply', nargs='+', action='append')
+    g.add_argument('-m', '--measure', nargs='+', action='append')
+    g.add_argument('-s', '--state', nargs='+', action='append')
+    g.add_argument('-c', '--circuit', nargs='+', action='append')
+    g.add_argument('-p', '--probs', nargs='+', action='append')
+    g.add_argument('-i-t', '--if-then', nargs='+', action='append')
+    g.add_argument('-i-t-e', '--if-then-else', nargs='+', action='append')
+    g.add_argument('-f-e', '--for-each', nargs='+', action='append')
+    g.add_argument('-e', '--execute', nargs=1, action='append') # TODO
+    g.add_argument('-t', '--timer', nargs='+', action='append')
     g.add_argument('-l', '--list', action='store_true') # TODO
     g.add_argument('-q', '--quit', action='store_true') # TODO
     g.add_argument('-h', '--help', action='store_true') # TODO
 
     env = {}
     env['states_dict'] = {}
-    env['vars_dict'] = {}
+    env['measurements_dict'] = {}
     env['gates_dict'] = gates.gates_dict
     env['disp_time'] = False
     env['quit_program'] = False
-    while not env['quit_program']:
-        try:      
-            statements = input('#~: ')
-            start = time.time()
-            # import cProfile, pstats, io
-            # pr = cProfile.Profile()
-            # pr.enable()
-            # Parse the current statement(s) and return command(s) that can be acted on
-            commands = get_commands(parser, statements)
-            # Execute the current command(s), and return env
-            env = execute_commands(parser, commands, env)
-            # pr.disable()
-            # s = io.StringIO()
-            # ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
-            # ps.print_stats()
-            # print(s.getvalue())
-            end = time.time()
-            if env['disp_time']:
-                print("Time taken: " + str(end - start) + " seconds")
-        except ArgumentParserError as e:
-            if e.error_class:
+
+    if sys.argv[1:]:
+        for x in sys.argv[1:]:
+            try:
+                commands = get_commands(parser, f"--execute {x}")
+                env = execute_commands(parser, commands, env)
+            except ArgumentParserError as e:
+                print(f"{e.error_class}: {e.message}")         
+    else:
+        print("Welcome to QCmd, a terminal-based quantum computing simulator. \nEnter --help or -h for more information. To quit the program, enter --quit or -q.\n")
+        readline.parse_and_bind("tab: complete")
+        old_delims = readline.get_completer_delims()
+        readline.set_completer_delims(old_delims.replace('-', ''))
+        while not env['quit_program']:
+            try:      
+                def completer(text, state):
+                    arguments = ['--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', '--probs', 
+                                '--apply', '--measure', '--timer', '--if-then', '--if-then-else', '--for-each', '--execute', '--list', '--quit', '--help', 
+                                '.qs=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements',
+                                '-n', '-j', '-r', '-d', '-k', '-a', '-m', '-s', '-c', '-p', '-i-t', '-i-t-e', '-f-e', '-e', '-t', '-l', '-q', '-h']
+                    arguments += env['states_dict'].keys()
+                    arguments += env['measurements_dict'].keys()
+                    arguments += env['gates_dict'].keys()
+                    options = [i for i in arguments if len(text) > 0 and i.startswith(text)]
+                    if state < len(options):
+                        return options[state]
+                    else:
+                        return None
+                readline.set_completer(completer)
+                statements = input('#~: ')
+                start = time.time()
+                # Parse the current statement(s) and return command(s) that can be acted on
+                commands = get_commands(parser, statements)
+                # Execute the current command(s), and return env
+                env = execute_commands(parser, commands, env)
+                end = time.time()
+                if env['disp_time']:
+                    print("Time taken: " + str(end - start) + " seconds")
+            except ArgumentParserError as e:
                 print(f"{e.error_class}: {e.message}")
-            else:
-                print(e.message)
 
     quit()
 

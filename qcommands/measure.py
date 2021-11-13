@@ -19,10 +19,10 @@ def command(env, command_args):
                 if v.is_valid_qubit_of_state(q, s_object):
                     bit = s_object.measurement(int(q))
                     measurement_number = 1
-                    for measurement in env['vars_dict']:
+                    for measurement in env['measurements_dict']:
                         if measurement.startswith(f'{s}.{q}.m'):
                             measurement_number += 1 
-                    env['vars_dict'][f"{s}.{q}.m{measurement_number}"] = bit
+                    env['measurements_dict'][f"{s}.{q}.m{measurement_number}"] = bit
                 else:
                     raise MeasureCommandError(f"Invalid reference of qubit in state {s}: {q}")
     return env

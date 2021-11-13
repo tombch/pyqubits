@@ -70,6 +70,21 @@ def is_valid_qubit_list_of_state(q_list, s):
     return True
 
 
+def is_code_block(code_block):
+    if code_block[0] != '{' or code_block[-1] != '}':
+        return False
+    else:
+        return True
+
+
+def is_letters(text):
+    illegal_chars = re.search("[^a-zA-Z]", text)
+    if illegal_chars:
+        return False
+    else:
+        return True
+
+
 def construct_int_list(q_list):
     if q_list[0] != '[' or q_list[-1] != ']':
         return None
@@ -82,10 +97,26 @@ def construct_int_list(q_list):
         return items  
     except ValueError:
         return None
-  
 
-def remove_braces(code_block):
-    if code_block[0] != '{' or code_block[-1] != '}':
+
+def construct_range_list(str_tup):
+    if str_tup[0] != '(' or str_tup[-1] != ')':
         return None
     else:
-        return code_block[1:-1]
+        str_tup = str_tup[1:-1]
+    items = str_tup.split(',')
+    try:
+        for i in range(len(items)):
+            items[i] = int(items[i])
+            if items[i] < 0:
+                return None    
+        return items 
+    except ValueError:
+        return None
+    
+    
+def indent_error(error):
+    error_list = error.split("\n")
+    for i in range(len(error_list)):
+        error_list[i] = " " + error_list[i]   
+    return '\n'.join(error_list)

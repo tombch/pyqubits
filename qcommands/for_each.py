@@ -1,5 +1,7 @@
 import main
 import re
+from . import verifiers as v
+from main import ArgumentParserError
 
 
 class ForEachCommandError(Exception):
@@ -7,25 +9,41 @@ class ForEachCommandError(Exception):
 
 
 def command(parser, env, command_args):
-    i_arg = command_args[0]
-    iterable_arg = command_args[1]
-    statements = command_args[2]
-    iterable_arg = iterable_arg[1:len(iterable_arg)-1].split(',')
-    iterable_arg = [int(x) for x in iterable_arg]
-    if iterable_arg[0] <= iterable_arg[1]:
-        iterable_arg[1] += 1
+    if len(command_args) != 3:
+        raise ForEachCommandError(f"Expected exactly three arguments.")
     else:
-        iterable_arg[1] -= 1
-    iterable = range(*tuple(iterable_arg))
-    # iterate a number of times as specified by user
-    for i in iterable:       
-        statements_i = statements
-        need_spaces = re.findall('[^0-9a-zA-Z]i[^0-9a-zA-Z]', statements_i)
-        for pattern in need_spaces:
-            replacement = pattern.replace(i_arg, str(i))
-            statements_i = statements_i.replace(pattern, replacement)
-        statements_i = statements_i[1:len(statements_i)-1]
-        commands = main.get_commands(parser, statements_i)
-        # Execute the current command(s), and return env
-        env = main.execute_commands(parser, commands, env)
+        i_arg = command_args[0]
+        tuple_string = command_args[1]
+        for_statements = command_args[2]
+        if v.is_letters(i_arg):
+            iterable_arg = v.construct_range_list(tuple_string)
+            if iterable_arg != None and 1 < len(iterable_arg) < 4:
+                if iterable_arg[0] <= iterable_arg[1]:
+                    iterable_arg[1] += 1
+                else:
+                    iterable_arg[1] -= 1
+                iterable = range(*tuple(iterable_arg))
+                if not v.is_code_block(for_statements):
+                    raise ForEachCommandError("For statement is missing braces.")
+                else:
+                    for_statements = for_statements[1:-1]
+                    # Iterate a number of times as specified by user
+                    for i in iterable:       
+                        for_statements_i = for_statements
+                        reg_pattern = f"[^0-9a-zA-Z]{i_arg}[^0-9a-zA-Z]"
+                        dummy_vars_needing_spaces = re.findall(reg_pattern, for_statements_i)
+                        for pattern in dummy_vars_needing_spaces:
+                            replacement = pattern.replace(i_arg, str(i))
+                            for_statements_i = for_statements_i.replace(pattern, replacement)
+                        try:
+                            env['measurements_dict'][i_arg] = i
+                            commands = main.get_commands(parser, for_statements_i)
+                            env = main.execute_commands(parser, commands, env)
+                            env['measurements_dict'].pop(i_arg)
+                        except ArgumentParserError as e:
+                            raise ForEachCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")
+            else:
+                raise ForEachCommandError(f"Invalid range tuple: {tuple_string}")
+        else:
+            raise ForEachCommandError(f"Invalid dummy variable: {i_arg}")
     return env

@@ -51,7 +51,7 @@ def command(env, command_args):
         pass
     # Otherwise, keep specified measurements
     elif keep_type in keep_measurement_options:
-        for m in env['vars_dict']:
+        for m in env['measurements_dict']:
             keep_m = False
             for s in objects_to_keep:
                 if m.startswith(f'{s}.'):
@@ -59,5 +59,5 @@ def command(env, command_args):
             if not keep_m:
                 measurements_to_delete.append(m)
     for m in measurements_to_delete:
-        del env['vars_dict'][m]
+        del env['measurements_dict'][m]
     return env
