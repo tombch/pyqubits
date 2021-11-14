@@ -1,8 +1,9 @@
-# CmdQuantum - Command-line quantum computing simulator
-## Introduction \& Requirements
-CmdQuantum is a python program for quantum computing simulations in your terminal.
+# CmdQuantum 
 
-For dependencies see `requirements.txt`. Once necessary requirements are installed, enter `python main.py` to run the program.
+## Terminal-based quantum computing simulator
+
+### Requirements
+For dependencies see `requirements.txt`. Once necessary requirements are installed, run the program by entering `python cmdq.py`.
 
 ## Things you can do
 
@@ -119,83 +120,102 @@ python -m CmdQuantum script1 script2 ...
 ```
 
 ## Command List
-### `-n`, `--new`
+### `-n`, `new`
 ```
---new s1 s2 s3 ... num_qubits=N state=PRESET_STATE
+new s1 s2 s3 ... .qubits=NUM_QUBITS .preset=PRESET_STATE
 ```
-Create multiple new random quantum states, each containing `N` qubits. 
-The names `s1`, `s2`, `s3`, etc of the created quantum states can only contain the numbers 0-9, the lowercase letters a-z and the uppercase letters A-Z.
-* `nq`, `num_qubits` - an optional parameter (default for this parameter is `1`).
-* `s`, `state` - an optional parameter for specifying a preset state (not specifying this parameter means a random state will be created).
-    * `state=zero` - used to create multiple new quantum states of the form `|0...0>`, with number of qubits determined by `num_qubits`.
-    * `state=one` - used to create multiple new quantum states of the form `|1...1>`, with number of qubits determined by `num_qubits`.
+Create multiple new quantum states. 
 
-### `-j`, `--join`
+The names `s1`, `s2`, `s3`, etc of the created quantum states can only contain the digits `0-9`, the lowercase letters `a-z` and the uppercase letters `A-Z`.
+#### Optional parameters
+* `.q`, `.qubits`
+    * Specifies the number of qubits in each new state.
+    * Not specifying this parameter will mean each new state has only one qubit.
+* `.ps`, `.preset`
+    * Specifies a preset state.
+        * `.preset=zero` - each new state will be of the form `|0...0>`.
+        * `.preset=one` - each new state will be of the form `|1...1>`.
+    * Not specifying this parameter will mean each new state has a random state vector.
+
+
+### `-j`, `join`
 ```
---join s1 s2 s3 ... name=NEW_NAME
+join s1 s2 s3 ... .name=NEW_NAME
 ```
 Join multiple pre-existing quantum states into one quantum state.
-* `name` - an optional parameter (default for this parameter is `s1xs2xs3x`...). 
+#### Optional parameters
+* `.name`
+    * Specify a custom name for the new joint state.
+    * The new name can only contain the digits `0-9`, the lowercase letters `a-z` and the uppercase letters `A-Z`.
+    * Not specifying this parameter will mean the name of the joint state is created by joining each of the state names with an `x`. For example, the default name for the above joined states is `s1xs2xs3x...`. 
 
-### `-s`, `--state`
+### `-s`, `state`
 ```
---state s1 s2 s3 ...
+state s1 s2 s3 ...
 ```
 Print the state vectors for multiple quantum states. 
 
 **WARNING**: with each additional qubit added to a state, the number of basis vectors grows exponentially, so print wisely.
 
-### `-c`, `--circuit`
+### `-c`, `circuit`
 ```
---circuit s1 s2 s3 ...
+circuit s1 s2 s3 ...
 ```
 Print the circuit diagrams for multiple quantum states.
 
-### `-p`, `--probs`
+### `-p`, `probs`
 ```
---probs s1 s2 s3 ...
+probs s1 s2 s3 ...
 ```
-Print histograms displaying measurement probabilities for multiple quantum states.
+Print probability distributions for the measurement outcomes of multiple quantum states.
 
-### `-a`, `--apply`
+### `-a`, `apply`
 ```
---apply g s qubit1 qubit2 qubit3 ...
---apply g s [qubit1, qubit2, ...] [qubit1, qubit2, ...] ...
+apply g s q1 q2 q3 ...
+apply g s [q1, q2] [q3, q4] ...
 ```
 Apply quantum logic gate `g` to specified qubit(s) in the state `s`. 
-Each qubit is specified by an integer; printing the circuit diagram for the state can help keep track of which qubit(s) you want to manipulate.
 
-A gate may act on one or more qubits:
-* If a gate acts on only one qubit, then the qubit argument is an integer. Passing multiple integers in the form `qubit1 qubit2 ...` corresponds to the gate being applied to `qubit1` and then `qubit2` and so on.
-* If a gate acts on at least two qubits, then qubit arguments must be passed in an array of integers. Multiple arrays being passed means multiple applications of the gate to (potentially) different sets of qubits.
 
-### `-m`, `--measure`
-```
---measure s q1 q2 q3 ... make_vars
-```
-Measure multiple qubits in the quantum state s.
-* `mv`, `make_vars` - an optional setting that when included in the command, saves the measurements into variables with the naming convention `s.q1`, `s.q2`, `s.q3`, etc. These variables store the latest measurement for their qubit, and additional measurements on said qubit will cause the previous measurement to be overwritten.
+Each qubit `q1, q2, ...` is specified by an integer that denotes their position in their states' circuit. 
+Printing the circuit diagram for the state can help keep track of which qubits have been manipulated.
 
-### `-r`, `--rename`
-```
---rename current_name new_name
-```
-Rename a quantum state.
+#### Single qubit gates
+Qubit arguments must be passed in the form `q1 q2 ...`, which corresponds to the gate being applied to `q1`, then `q2` and so on.
 
-### `-t`, `--timer`
-```
---timer on/off
-```
-Show/hide the timer by specifying as either `on` or `off`.
+#### Two qubit gates
+Qubit arguments must be passed in the form `[q1, q2] [q3, q4] ...`, which corresponds to the gate being applied to `q1` and `q2`, then `q3` and `q4`, and so on.
 
-### `-l`, `--list`
+### `-m`, `measure`
+```
+measure s q1 q2 q3 ...
+```
+Measure multiple qubits in a quantum state.
+
+Each measurement is stored with an associated name. For example, the 6th measurement of the 4th qubit in state `s` is saved with the name `s.4.m6`.
+
+### `-r`, `rename`
+```
+rename current_name new_name
+```
+Rename a quantum state. 
+
+If a pre-existing state already has the name `new_name`, that state will be overwritten.
+
+### `-t`, `timer`
+```
+--timer show/hide
+```
+Show/hide the timer by specifying with either `show` or `hide`.
+
+### `-l`, `list`
 List all currently existing quantum states and variables in the program.
 
-### `-q`, `--quit`
+### `-q`, `quit`
 Quit the program.
 
-### `-h`, `--help`
-Print the documentation of each command.
+### `-h`, `help`
+Print a help message that outlines each command.
 
 ### `-i-t`, `--if-then`
 ```
