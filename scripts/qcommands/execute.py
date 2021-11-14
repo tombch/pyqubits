@@ -10,7 +10,7 @@ def command(env, command_args):
     if len(command_args) < 1:
         raise ExecuteCommandError(f"Expected at least one argument.")
     else:
-        extension = ".qcmd"
+        extension = ".cq"
         for file_name in command_args:
             if file_name.endswith(extension):
                 file_name = file_name[:-len(extension)]

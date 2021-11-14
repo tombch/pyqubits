@@ -153,7 +153,7 @@ def program():
             except ArgumentParserError as e:
                 print(f"{e.error_class}: {e.message}")                                  
     else:
-        print("Welcome to QCmd, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '##' and then press tab twice.\nEnter 'help' or '-h' for more information regarding commands.\nTo quit the program, enter 'quit' or '-q'.\n")
+        print("Welcome to CmdQuantum, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '##' and then press tab twice.\nEnter 'help' or '-h' for more information regarding commands.\nTo quit the program, enter 'quit' or '-q'.\n")
         readline.parse_and_bind("tab: complete")
         old_delims = readline.get_completer_delims()
         readline.set_completer_delims(old_delims.replace('-', ''))

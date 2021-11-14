@@ -1,6 +1,6 @@
-# QCmd - Command-line quantum computing simulator
+# CmdQuantum - Command-line quantum computing simulator
 ## Introduction \& Requirements
-QCmd is a python program for quantum computing simulations in your terminal.
+CmdQuantum is a python program for quantum computing simulations in your terminal.
 
 For dependencies see `requirements.txt`. Once necessary requirements are installed, enter `python main.py` to run the program.
 
@@ -8,7 +8,7 @@ For dependencies see `requirements.txt`. Once necessary requirements are install
 
 ### Create a Bell State
 ```
-Welcome to QCmd, a terminal-based quantum computing simulator. 
+Welcome to CmdQuantum, a terminal-based quantum computing simulator. 
 To see a list of available commands, enter '-' and then press tab twice.
 Enter 'help' or '-h' for more information regarding commands.
 To quit the program, enter 'quit' or '-q'.
@@ -39,7 +39,7 @@ Probability distribution for bellstate [2]:
 
 ### Quantum Teleportation
 ```
-Welcome to QCmd, a terminal-based quantum computing simulator. 
+Welcome to CmdQuantum, a terminal-based quantum computing simulator. 
 To see a list of available commands, enter '-' and then press tab twice.
 Enter 'help' or '-h' for more information regarding commands.
 To quit the program, enter 'quit' or '-q'.
@@ -106,7 +106,7 @@ If an error occurs while executing a series of commands entered on the same line
 For example, if `command6` in the above line causes an error, any changes that `command4` and `command5` made to the environment of the program will not be saved.
 
 ### Running Scripts
-QCmd can execute scripts within the program (using the `execute` command):
+CmdQuantum can execute scripts within the program (using the `execute` command):
 
 ```
 #~: execute script1 script2 ...
@@ -115,7 +115,7 @@ QCmd can execute scripts within the program (using the `execute` command):
 or it can independently execute multiple scripts passed as arguments to the program:
 
 ```
-python -m qcmd script1 script2 ...
+python -m CmdQuantum script1 script2 ...
 ```
 
 ## Command List
