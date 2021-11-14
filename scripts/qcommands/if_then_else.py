@@ -30,11 +30,9 @@ def command(env, command_args):
                 raise IfThenElseCommandError(f"While executing if-then-else statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{v.indent_error(str(msg))}")
             try:
                 if execute_then_statements == True:
-                    commands = main.get_commands(then_statements)
-                    env = main.execute_commands(commands, env)
+                    env = main.run_commands(then_statements, env)
                 elif execute_then_statements == False:
-                    commands = main.get_commands(else_statements)
-                    env = main.execute_commands(commands, env)
+                    env = main.run_commands(else_statements, env)
                 else:
                     raise IfThenElseCommandError("If condition did not evaluate to either True or False.")
             except main.ArgumentParserError as e:

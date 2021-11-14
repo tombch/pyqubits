@@ -26,8 +26,7 @@ def command(env, command_args):
                 raise IfThenCommandError(f"While executing if-then statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{v.indent_error(str(msg))}")
             try:
                 if execute_then_statements == True:
-                    commands = main.get_commands(then_statements)
-                    env = main.execute_commands(commands, env)
+                    env = main.run_commands(then_statements, env)
                 elif execute_then_statements == False:
                     pass
                 else:

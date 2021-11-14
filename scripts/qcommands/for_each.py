@@ -41,8 +41,7 @@ def command(env, command_args):
                         for_statements_i = for_statements_i.replace(pattern, replacement)
                     try:
                         env['measurements_dict'][i_arg] = i
-                        commands = main.get_commands(for_statements_i)
-                        env = main.execute_commands(commands, env)
+                        env = main.run_commands(for_statements_i, env)
                         env['measurements_dict'].pop(i_arg)
                     except main.ArgumentParserError as e:
                         raise ForEachCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")     

@@ -127,6 +127,14 @@ def execute_commands(commands, env):
     return env
 
 
+def run_commands(statements, env):
+    # Turn statements into commands that can be executed
+    commands = get_commands(statements)
+    # Execute the commands and return the modified environment
+    env = execute_commands(commands, env)
+    return env
+
+
 def program():
     env = {}
     env['states_dict'] = {}
@@ -138,8 +146,7 @@ def program():
         for x in sys.argv[1:]:
             try:
                 start = time.time()
-                commands = get_commands(f"execute {x}")
-                env = execute_commands(commands, env)
+                env = run_commands(f"execute {x}", env)
                 end = time.time()
                 if env['disp_time']:
                     print("Time taken: " + str(end - start) + " seconds")
@@ -176,10 +183,7 @@ def program():
                 readline.set_completer(completer)
                 statements = input('#~: ')
                 start = time.time()
-                # Turn statements into commands that can be executed
-                commands = get_commands(statements)
-                # Execute the commands and return env
-                env = execute_commands(commands, env)
+                env = run_commands(statements, env)
                 end = time.time()
                 if env['disp_time']:
                     print("Time taken: " + str(end - start) + " seconds")

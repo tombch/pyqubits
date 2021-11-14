@@ -1,4 +1,5 @@
 from scripts.qcommands import verifiers as v
+from scripts import main
 # python3 -m pytest -v
 
 
@@ -95,12 +96,28 @@ def test_is_letters():
 
 
 def test_construct_int_list():
-    pass
+    assert v.construct_int_list("[1, 2, 3]") == [1, 2, 3]
+    assert v.construct_int_list("[1,2,3]") == [1, 2, 3]
+    
+    assert v.construct_int_list("[1, 2, 3.0]") == None # TODO: Change this
+    assert v.construct_int_list("[]") == None
+    assert v.construct_int_list("(1, 2, 3)") == None
+    assert v.construct_int_list("] [") == None
 
 
 def test_construct_float_list():
-    pass
+    assert v.construct_float_list("[1, 2, 3]") == [1, 2, 3]
+    assert v.construct_float_list("[1,2,3]") == [1, 2, 3]
+    assert v.construct_float_list("[1.0, 2, 3.0]") == [1, 2, 3]
+    assert v.construct_float_list("[1.5, 2, 3]") == [1.5, 2, 3]
+
+    assert v.construct_float_list("[s]") == None
+    assert v.construct_float_list("] [") == None
 
 
 def test_construct_range_list():
-    pass
+    assert v.construct_range_list("(1, 2, -1)") == [1, 2, -1]
+    assert v.construct_range_list("(-1, 2, -1)") == [-1, 2, -1]
+
+    assert v.construct_range_list("(1.5, 2, -1)") == None
+    assert v.construct_range_list("([1], 2, [-1])") == None
