@@ -12,10 +12,8 @@ class QuantumState:
     w = 3
 
     def __init__(self, num_qubits=1, preset_state=None, preset_state_vector=None, state_name=None):
-        # Set number of qubits and the corresponding number of classical states
         self.num_qubits = num_qubits
         self.num_classical_states = 2**self.num_qubits
-        # Set the name of the state, if provided
         if state_name:
             self.state_name = state_name
         else:
@@ -28,7 +26,7 @@ class QuantumState:
         elif preset_state == "one":
             # The one state is the state |11...11>
             self.state_vector = np.zeros(self.num_classical_states) + np.zeros(self.num_classical_states) * 1j
-            self.state_vector[self.num_classical_states-1] = 1
+            self.state_vector[-1] = 1
         elif isinstance(preset_state_vector, np.ndarray):
             self.state_vector = preset_state_vector
         else:
@@ -57,7 +55,7 @@ class QuantumState:
             joint_circuit_length = len(self.circuit)
             for i in range(abs(diff_in_length)):
                 q.circuit.append(q.blank_circuit_lanes(include_actions=False))
-        # the circuits are the same length, so we can take the length of either
+        # The circuits are the same length, so we can take the length of either
         else:
             joint_circuit_length = len(self.circuit)
         merged_circuit = [""]
@@ -136,17 +134,17 @@ class QuantumState:
         return bit
     
     def print_state(self):
-        # trying out generators
-        gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))
-        state_string = f" {self.state_name} = "
-        for x in gen_classical_states:
-            current_amplitude = round(self.state_vector[x[0]].real, QuantumState.dp) + round(self.state_vector[x[0]].imag, QuantumState.dp) * 1j
+        gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))   
+        print(f"State vector for {self.state_name} [{self.num_actions}]:")
+        first_line = True
+        for i, bin_i in gen_classical_states:
+            current_amplitude = round(self.state_vector[i].real, QuantumState.dp) + round(self.state_vector[i].imag, QuantumState.dp) * 1j
             if current_amplitude != 0:
-                current_amplitude_string = str(current_amplitude)
-                state_string += f"{current_amplitude_string} |{x[1]}>\n"
-        newline_count = state_string.count("\n")
-        state_string = state_string.replace("\n", f"\n{' ' * (1 + len(self.state_name))} + ", newline_count-1)
-        print(f"State vector for {self.state_name} [{self.num_actions}]:\n{state_string[:len(state_string)-1]}")
+                if first_line:
+                    print(f" {self.state_name} = {current_amplitude} |{bin_i}>")
+                    first_line = False
+                else:
+                    print(f" {' ' * len(self.state_name)} + {current_amplitude} |{bin_i}>")
 
     def print_circuit(self):
         print(f"Circuit diagram for {self.state_name}:")
@@ -154,8 +152,7 @@ class QuantumState:
             print(" " + x)
 
     def print_probabilities(self):
-        # trying out generators
         gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))
         print(f"Probability distribution for {self.state_name} {[self.num_actions]}:")
-        for x in gen_classical_states:
-            print(f" {x[1]}\t{round(abs(self.state_vector[x[0]])**2, 2)}\t{'=' * int(round(50 * abs(self.state_vector[x[0]])**2))}")
+        for i, bin_i in gen_classical_states:
+            print(f" {bin_i}\t{round(abs(self.state_vector[i])**2, 2)}\t{'=' * int(round(50 * abs(self.state_vector[i])**2))}")

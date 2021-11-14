@@ -10,7 +10,7 @@ from scripts.qcommands import verifiers as v
 
 
 class ArgumentParserError(Exception):
-    __slots = 'message', 'error_class'
+    __slots__ = 'message', 'error_class'
     def __init__(self, message, error_class=None):
         self.message = message
         self.error_class = error_class
@@ -42,9 +42,9 @@ def regroup(split_statement, left_char, right_char, split_char):
             current_statement += split_statement[i] + split_char
         i += 1
     if open_expr > 0:
-        raise ArgumentParserError(f"Incorrect syntax: missing '{right_char}' to close expression.",  error_class='ArgumentParserError')
+        raise ArgumentParserError(f"Incorrect syntax: encountered more '{left_char}' than '{right_char}'.",  error_class='ArgumentParserError')
     elif open_expr < 0:
-        raise ArgumentParserError(f"Incorrect syntax: missing '{left_char}' to close expression.",  error_class='ArgumentParserError')
+        raise ArgumentParserError(f"Incorrect syntax: encountered more '{right_char}' than '{left_char}'.",  error_class='ArgumentParserError')
     return regrouped_expressions
 
 

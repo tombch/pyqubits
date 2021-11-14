@@ -10,7 +10,7 @@ For dependencies see `requirements.txt`. Once necessary requirements are install
 ### Create a Bell State
 ```
 Welcome to CmdQuantum, a terminal-based quantum computing simulator. 
-To see a list of available commands, enter '-' and then press tab twice.
+To see a list of available commands, enter '##' and then press tab twice.
 Enter 'help' or '-h' for more information regarding commands.
 To quit the program, enter 'quit' or '-q'.
 
@@ -41,7 +41,7 @@ Probability distribution for bellstate [2]:
 ### Quantum Teleportation
 ```
 Welcome to CmdQuantum, a terminal-based quantum computing simulator. 
-To see a list of available commands, enter '-' and then press tab twice.
+To see a list of available commands, enter '##' and then press tab twice.
 Enter 'help' or '-h' for more information regarding commands.
 To quit the program, enter 'quit' or '-q'.
 
@@ -116,7 +116,7 @@ CmdQuantum can execute scripts within the program (using the `execute` command):
 or it can independently execute multiple scripts passed as arguments to the program:
 
 ```
-python -m CmdQuantum script1 script2 ...
+python -m cmdq script1 script2 ...
 ```
 
 ## Command List
@@ -209,7 +209,7 @@ If a pre-existing state already has the name `new_name`, that state will be over
 Show/hide the timer by specifying with either `show` or `hide`.
 
 ### `-l`, `list`
-List all currently existing quantum states and variables in the program.
+List all currently existing quantum states and measurements in the program.
 
 ### `-q`, `quit`
 Quit the program.

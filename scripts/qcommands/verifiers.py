@@ -16,7 +16,19 @@ def is_valid_num_qubits(n):
         else:
             return False
     except ValueError:
-        return False
+        try:
+            n_str_dec = n.split(".")[-1]
+            if int(n_str_dec) != 0:
+                return False
+            else:
+                n_float = float(n)
+                n_int = int(n_float)
+                if n_float == n_int and n_int > 0:
+                    return True
+                else: 
+                    return False
+        except ValueError:
+            return False
 
 
 def is_valid_preset_state(p):
@@ -71,6 +83,7 @@ def is_valid_qubit_list_of_state(q_list, s):
 
 
 def is_code_block(code_block):
+    code_block = code_block.strip()
     if code_block[0] != '{' or code_block[-1] != '}':
         return False
     else:
