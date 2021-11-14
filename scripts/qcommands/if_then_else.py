@@ -1,7 +1,6 @@
-import main
-import logic_evaluator
+from .. import logic_evaluator
+from .. import main
 from . import verifiers as v
-from main import ArgumentParserError
 
 
 class IfThenElseCommandError(Exception):
@@ -38,6 +37,6 @@ def command(env, command_args):
                     env = main.execute_commands(commands, env)
                 else:
                     raise IfThenElseCommandError("If condition did not evaluate to either True or False.")
-            except ArgumentParserError as e:
+            except main.ArgumentParserError as e:
                 raise IfThenElseCommandError(f"While executing if-then-else statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")
     return env

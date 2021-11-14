@@ -3,11 +3,10 @@ import sys
 import time
 import re
 import copy
-import logic_evaluator
-import gates
-import qcommands
-from qcommands import verifiers as v
-from quantum_state import QuantumState
+from . import logic_evaluator
+from . import gates
+from . import qcommands
+from scripts.qcommands import verifiers as v
 
 
 class ArgumentParserError(Exception):
@@ -17,11 +16,9 @@ class ArgumentParserError(Exception):
         self.error_class = error_class
 
 
-def regroup(split_statement, left_char, right_char, split_char=""):
-    '''
-    Re-group expressions/lists after separation caused by splitting the string on split_char.
-    split_char must be specified when calling regroup, otherwise expressions/lists may be reconstructed incorrectly.
-    '''
+def regroup(split_statement, left_char, right_char, split_char):
+    # Re-group expressions/lists after separation caused by splitting the string on a character.
+    # split_char is the character used to split the statement, and is needed for reconstructing expressions/lists.
     regrouped_expressions = []
     num_splits = len(split_statement)
     i = 0
@@ -53,6 +50,7 @@ def regroup(split_statement, left_char, right_char, split_char=""):
 
 def get_commands(statements):
     keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
+    keyword_shortcuts = ['-n', '-j', '-r', '-d', '-k', '-s', '-c', '-p', '-a', '-m', '-t', '-it', '-ite', '-fe', '-e', '-l', '-q', '-h']
     statements = statements.replace('\n', ' ')
     statements = statements.replace("{", " { ")
     statements = statements.replace("}", " } ")
@@ -85,14 +83,14 @@ def get_commands(statements):
                         if evaluated_x != None and not isinstance(evaluated_x, str):
                             command_args[i] = command_args[i].replace(x, str(evaluated_x))
             command = {}
-            for i in range(len(keywords)):
-                if command_args[0] == keywords[i]:
-                    command = {'cmd' : keywords[i], 'args' : command_args[1:]}
+            for keyword, keyword_shortcut in zip(keywords, keyword_shortcuts):
+                if command_args[0] == keyword or command_args[0] == keyword_shortcut:
+                    command = {'cmd' : keyword, 'args' : command_args[1:]}
                     break
             if not command:
                 raise ArgumentParserError(f"Unrecognised command: {command_args[0]}", error_class='ArgumentParserError')
             for i in range(1, len(command_args)):
-                if command_args[i] in keywords:
+                if command_args[i] in keywords or command_args[i] in keyword_shortcuts:
                     raise ArgumentParserError(f"Command {command_args[i]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')
             commands.append(command)
     return commands
@@ -122,9 +120,10 @@ def execute_commands(commands, env):
     env = copy.deepcopy(env)
     for command in commands:
         try:
-            env = keywords[command['cmd']]['func'](env, command['args'])
-        except keywords[command['cmd']]['error'] as msg:
-            raise ArgumentParserError(msg, error_class=keywords[k]['error_name'])
+            keyword = command['cmd']
+            env = keywords[keyword]['func'](env, command['args'])
+        except keywords[keyword]['error'] as msg:
+            raise ArgumentParserError(msg, error_class=keywords[keyword]['error_name'])
     return env
 
 
@@ -154,17 +153,18 @@ def program():
             except ArgumentParserError as e:
                 print(f"{e.error_class}: {e.message}")                                  
     else:
-        print("Welcome to QCmd, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '-' and then press tab twice.\nEnter 'help' or '-h' for more information regarding commands.\nTo quit the program, enter 'quit' or '-q'.\n")
+        print("Welcome to QCmd, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '##' and then press tab twice.\nEnter 'help' or '-h' for more information regarding commands.\nTo quit the program, enter 'quit' or '-q'.\n")
         readline.parse_and_bind("tab: complete")
         old_delims = readline.get_completer_delims()
         readline.set_completer_delims(old_delims.replace('-', ''))
+        readline.set_completer_delims(old_delims.replace('#', ''))
         while not env['quit_program']:
             try:      
                 def completer(text, state):
-                    arguments = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help',
-                                '--new', '--join', '--rename', '--delete', '--keep', '--state', '--circuit', '--probs', '--apply', '--measure', '--timer', '--if-then', '--if-then-else', '--for-each', '--execute', '--list', '--quit', '--help',
-                                '.qs=', '.qubits=', '.p=', '.preset=', '.name=', '.s', '.state', '.states', '.m', '.measurement', '.measurements',
-                                '-n', '-j', '-r', '-d', '-k', '-a', '-m', '-s', '-c', '-p', '-i-t', '-i-t-e', '-f-e', '-e', '-t', '-l', '-q', '-h']
+                    keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
+                    keyword_shortcuts = ['-n', '-j', '-r', '-d', '-k', '-s', '-c', '-p', '-a', '-m', '-t', '-it', '-ite', '-fe', '-e', '-l', '-q', '-h']
+                    arguments = keywords + keyword_shortcuts
+                    arguments += ['##' + x for x in keywords] + ['##' + x for x in keyword_shortcuts]
                     arguments += env['states_dict'].keys()
                     arguments += env['measurements_dict'].keys()
                     arguments += env['gates_dict'].keys()
@@ -176,9 +176,9 @@ def program():
                 readline.set_completer(completer)
                 statements = input('#~: ')
                 start = time.time()
-                # Parse the current statement(s) and return command(s) that can be acted on
+                # Turn statements into commands that can be executed
                 commands = get_commands(statements)
-                # Execute the current command(s), and return env
+                # Execute the commands and return env
                 env = execute_commands(commands, env)
                 end = time.time()
                 if env['disp_time']:

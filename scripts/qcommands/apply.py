@@ -1,4 +1,4 @@
-import gates
+from .. import gates
 from . import verifiers as v
 
 

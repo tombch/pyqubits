@@ -1,9 +1,4 @@
-import gates
-import quantum_state
-import logic_evaluator
-import qcommands
-import main
-
+from scripts import main
 
 def run():
     main.program()

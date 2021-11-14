@@ -1,26 +1,7 @@
 import numpy as np
 import random
-from gates import *
+from . import gates
 
-def kron_with_zero_matrix(matrix):
-    return np.zeros((2*matrix.shape[0], 2*matrix.shape[1]))
-    matrix = np.insert(matrix, [x+1 for x in range(matrix.shape[1])], 0, axis=0)
-    matrix = np.insert(matrix, [x+1 for x in range(matrix.shape[0])], 0, axis=1)
-    return matrix
-
-def kron_with_one_matrix(matrix):
-    return np.zeros((2*matrix.shape[0], 2*matrix.shape[1]))
-    matrix = np.insert(matrix, [x for x in range(matrix.shape[1])], 0, axis=0)
-    matrix = np.insert(matrix, [x for x in range(matrix.shape[0])], 0, axis=1)
-    return matrix
-
-def kron_with_identity_matrix(matrix):
-    return np.zeros((2*matrix.shape[0], 2*matrix.shape[1]))
-    matrix1 = np.insert(matrix, [x+1 for x in range(matrix.shape[1])], 0, axis=0)
-    matrix1 = np.insert(matrix1, [x+1 for x in range(matrix.shape[0])], 0, axis=1)
-    matrix2 = np.insert(matrix, [x for x in range(matrix.shape[1])], 0, axis=0)
-    matrix2 = np.insert(matrix2, [x for x in range(matrix.shape[0])], 0, axis=1)    
-    return np.add(matrix1, matrix2)
 
 # Class for creating, displaying and measuring quantum states
 class QuantumState:
@@ -116,22 +97,18 @@ class QuantumState:
 
     def measurement(self, qubit=1):
         if (qubit == 1):
-            measurement_matrix_zero = zero_matrix
-            measurement_matrix_one = one_matrix
+            measurement_matrix_zero = gates.zero_matrix
+            measurement_matrix_one = gates.one_matrix
         else:
-            measurement_matrix_zero = I_matrix
-            measurement_matrix_one = I_matrix
+            measurement_matrix_zero = gates.I_matrix
+            measurement_matrix_one = gates.I_matrix
         for i in range(2, self.num_qubits+1):
             if (i == qubit):
-                measurement_matrix_zero = np.kron(measurement_matrix_zero, zero_matrix)
-                measurement_matrix_one = np.kron(measurement_matrix_one, one_matrix)
-                # measurement_matrix_zero = kron_with_zero_matrix(measurement_matrix_zero)
-                # measurement_matrix_one = kron_with_one_matrix(measurement_matrix_one)
+                measurement_matrix_zero = np.kron(measurement_matrix_zero, gates.zero_matrix)
+                measurement_matrix_one = np.kron(measurement_matrix_one, gates.one_matrix)
             else:
-                measurement_matrix_zero = np.kron(measurement_matrix_zero, I_matrix)
-                measurement_matrix_one = np.kron(measurement_matrix_one, I_matrix)
-                # measurement_matrix_zero = kron_with_identity_matrix(measurement_matrix_zero)
-                # measurement_matrix_one = kron_with_identity_matrix(measurement_matrix_one)
+                measurement_matrix_zero = np.kron(measurement_matrix_zero, gates.I_matrix)
+                measurement_matrix_one = np.kron(measurement_matrix_one, gates.I_matrix)
         collapsed_zero = measurement_matrix_zero @ self.state_vector
         collapsed_one = measurement_matrix_one @ self.state_vector
         zero_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_zero.conjugate().transpose() @ collapsed_zero

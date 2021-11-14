@@ -1,5 +1,4 @@
-import main
-from main import ArgumentParserError
+from .. import main
 from . import verifiers as v
 
 
@@ -8,7 +7,7 @@ class ExecuteCommandError(Exception):
 
 
 def command(env, command_args):
-    if not (len(command_args) > 0):
+    if len(command_args) < 1:
         raise ExecuteCommandError(f"Expected at least one argument.")
     else:
         extension = ".qcmd"
@@ -22,7 +21,7 @@ def command(env, command_args):
                     try:
                         commands = main.get_commands(script)
                         env = main.execute_commands(commands, env)
-                    except ArgumentParserError as e:
+                    except main.ArgumentParserError as e:
                         raise ExecuteCommandError(f"While executing '{file_name}', encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")
             except FileNotFoundError:
                 raise ExecuteCommandError(f"File not found: {file_name}")

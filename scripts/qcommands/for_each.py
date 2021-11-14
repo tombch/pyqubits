@@ -1,7 +1,6 @@
-import main
 import re
+from .. import main
 from . import verifiers as v
-from main import ArgumentParserError
 
 
 class ForEachCommandError(Exception):
@@ -45,7 +44,7 @@ def command(env, command_args):
                         commands = main.get_commands(for_statements_i)
                         env = main.execute_commands(commands, env)
                         env['measurements_dict'].pop(i_arg)
-                    except ArgumentParserError as e:
+                    except main.ArgumentParserError as e:
                         raise ForEachCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")     
         else:
             raise ForEachCommandError(f"Invalid dummy variable: {i_arg}")
