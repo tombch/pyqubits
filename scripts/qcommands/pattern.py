@@ -10,7 +10,7 @@ class PatternCommandError(Exception):
 # TODO: Make better
 def func(env, input_args, func_name, func_args, func_body, return_args):
     if input_args == None:
-        raise PatternCommandError(f"Invalid input arguments: {input_args_str}")
+        raise PatternCommandError(f"Invalid input arguments: {input_args}")
     else:
         if len(input_args) != len(func_args):
             raise PatternCommandError(f"{func_name} expected {len(func_args)} argument(s) but received {len(input_args)}.")
@@ -32,11 +32,12 @@ def func(env, input_args, func_name, func_args, func_body, return_args):
                 func_env = main.run_commands(func_body, func_env)
             except main.ArgumentParserError as e:
                 raise PatternCommandError(f"While executing pattern '{func_name}', encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")    
+            inputs_to_return = []
             for i in range(len(func_args)):
                 for j in range(len(return_args)):
                     if func_args[i].strip() == return_args[j].strip():
-                        return_args[j] = input_args[i]          
-            for x in return_args:
+                        inputs_to_return.append(input_args[i])          
+            for x in inputs_to_return:
                 if x in func_env['states_dict'].keys():
                     env['states_dict'][x] = func_env['states_dict'][x]
                 elif x in func_env['measurements_dict'].keys():
@@ -56,19 +57,20 @@ def command(env, command_args):
         return_command = command_args[3:]
         if v.is_letters(func_name):
             args_list = v.construct_arg_list(func_args)
-            if args_list == None:
-                raise PatternCommandError(f"Invalid arguments: {func_args}")
-            for arg in args_list:
-                if arg in env['keywords_dict'].keys():
-                    raise PatternCommandError(f"Argument '{arg}' is invalid; it matches a keyword.")
-            if not v.is_code_block(func_body):
-                raise PatternCommandError("Pattern body is missing braces.")
-            else:
-                if return_command and return_command[0] != 'return':
-                    raise PatternCommandError(f"Expected 'return' but received: {return_command[0]}")
+            if args_list:
+                for arg in args_list:
+                    if arg in env['keywords_dict'].keys():
+                        raise PatternCommandError(f"Argument '{arg}' is invalid; it matches a keyword.")
+                if v.is_code_block(func_body):
+                    if not (return_command and return_command[0] != 'return'):
+                        return_args = return_command[1:]
+                    else:
+                        raise PatternCommandError(f"Expected 'return' but received: {return_command[0]}")
                 else:
-                    return_args = return_command[1:]
-                env['keywords_dict'][func_name] = {'shortcut' : None, 'func' : func, 'args' : args_list, 'body' : func_body[1:-1], 'return' : return_args, 'error' : PatternCommandError, 'error_name' : f'{func_name[0].upper()}{func_name[1:]}CommandError', 'builtin' : False}
+                    raise PatternCommandError("Pattern body is missing braces.")
+            else:
+                raise PatternCommandError(f"Invalid arguments: {func_args}")
         else:
             raise PatternCommandError(f"Invalid pattern name: {func_name}")
+    env['keywords_dict'][func_name] = {'shortcut' : None, 'func' : func, 'args' : args_list, 'body' : func_body[1:-1], 'return' : return_args, 'error' : PatternCommandError, 'error_name' : f'{func_name[0].upper()}{func_name[1:]}CommandError', 'builtin' : False}
     return env
