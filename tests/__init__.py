@@ -1,2 +1,3 @@
 import tests.test_verifiers
 import tests.test_commands
+import tests.run_test_cmdquantum
