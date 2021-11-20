@@ -1,0 +1,26 @@
+pattern show (x)
+{
+	state x;
+	prob-dist x;
+	circuit x;
+};
+
+
+pattern zero (x, num)
+{
+	new x .nq=num .v=zero
+}	return x;
+
+
+pattern one (x, num)
+{
+	new x .nq=num .v=one
+}	return x;	
+
+
+pattern bellstate (x) 
+{
+	new x .nq=2 .v=zero;  
+	apply H x 1; 
+	apply CNOT x [1, 2]
+}	return x;

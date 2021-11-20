@@ -2,9 +2,10 @@ class KeepCommandError(Exception):
     pass
 
 
+# TODO: Make better
 def command(env, command_args):
-    keep_state_options = ['.s', '.state', '.states']
-    keep_measurement_options = ['.m', '.measurement', '.measurements']
+    keep_state_options = env['tags_dict']['keep_delete']['states']
+    keep_measurement_options = env['tags_dict']['keep_delete']['measurements']
     keep_type = command_args[0]
     objects_to_keep = command_args[1:len(command_args)]
     keep_all_states = False

@@ -19,7 +19,7 @@ To quit the program, enter 'quit' or '-q'.
 State vector for q [0]:
  q = (1+0j) |00>
 #~: apply H q 1; apply CNOT q [1, 2]
-#~: rename q bellstate; circuit bellstate; state bellstate; probs bellstate;
+#~: rename q bellstate; circuit bellstate; state bellstate; prob-dist bellstate;
 Circuit diagram for bellstate:
  1   2   
  |   |      [0]
@@ -163,9 +163,9 @@ circuit s1 s2 s3 ...
 ```
 Print the circuit diagrams for multiple quantum states.
 
-### `-p`, `probs`
+### `-p`, `prob-dist`
 ```
-probs s1 s2 s3 ...
+prob-dist s1 s2 s3 ...
 ```
 Print probability distributions for the measurement outcomes of multiple quantum states.
 

@@ -71,9 +71,7 @@ def get_expression(tokens, sub_expr_count=0):
                         env[tokens[i]] = {'symbol' : tokens[i], 'value' : float(tokens[i]), 'nargs' : 0}
                         expression.append(tokens[i])
                     except ValueError:
-                        raise LogicEvaluatorError(f"Unrecognised value: {tokens[i]}")
-                        # env[tokens[i]] = {'symbol' : tokens[i], 'value' : str(tokens[i]), 'nargs' : 0}
-                        # expression.append(tokens[i])
+                        raise LogicEvaluatorError(f"'{tokens[i]}' references a value that is not an integer, float or string.")
         i += 1    
     if tokens.count('(') < tokens.count(')'):
         raise LogicEvaluatorError("Syntax error: Missing opening '('")
@@ -82,7 +80,7 @@ def get_expression(tokens, sub_expr_count=0):
     return expression, i, sub_expr_count
 
 
-def evaluate(expr, accept_type_errors=False):
+def evaluate(expr):
     try:
         if not isinstance(expr, list):
             if env[expr]['nargs'] == 0:
@@ -112,19 +110,16 @@ def evaluate(expr, accept_type_errors=False):
             else:
                 raise LogicEvaluatorError(f'Ambiguous or invalid expression: {" ".join([env[k]["symbol"] for k in expr])}')
     except TypeError:
-        if not accept_type_errors:
-            raise LogicEvaluatorError('Attempted impossible comparison')
-        else:
-            return None
+        raise LogicEvaluatorError('Attempted impossible comparison')
     except ZeroDivisionError:
         raise LogicEvaluatorError('Attempted division by zero')
 
 
-def interpret(user_input, user_env=None, accept_type_errors=False):
+def interpret(user_input, user_env=None):
     if user_env is not None:
         for k in user_env.keys():
             env.update({k : {'symbol' : k, 'value' : user_env[k], 'nargs' : 0}})   
-    condition = evaluate(get_expression(get_tokens(user_input))[0], accept_type_errors)
+    condition = evaluate(get_expression(get_tokens(user_input))[0])
     return condition
 
 

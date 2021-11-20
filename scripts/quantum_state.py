@@ -151,8 +151,8 @@ class QuantumState:
         for x in self.circuit:
             print(" " + x)
 
-    def print_probabilities(self):
+    def print_prob_dist(self):
         gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))
         print(f"Probability distribution for {self.state_name} {[self.num_actions]}:")
         for i, bin_i in gen_classical_states:
-            print(f" {bin_i}\t{round(abs(self.state_vector[i])**2, 2)}\t{'=' * int(round(50 * abs(self.state_vector[i])**2))}")
+            print(f" {bin_i}\t{round(abs(self.state_vector[i])**2, 2)}\t|{'=' * int(round(50 * abs(self.state_vector[i])**2))}")

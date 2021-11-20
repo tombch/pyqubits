@@ -6,6 +6,8 @@ class MeasureCommandError(Exception):
 
 
 def command(env, command_args):
+    # TODO: .m1, .m2, .m3 etc tags for naming measurements
+    # .m1=name creates q.m1.name
     if len(command_args) < 2:
         raise MeasureCommandError("Expected at least two arguments.")
     else:

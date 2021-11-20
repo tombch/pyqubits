@@ -48,16 +48,10 @@ def regroup(split_statement, left_char, right_char, split_char):
     return regrouped_expressions
 
 
-def get_commands(statements):
-    keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
-    keyword_shortcuts = ['-n', '-j', '-r', '-d', '-k', '-s', '-c', '-p', '-a', '-m', '-t', '-it', '-ite', '-fe', '-e', '-l', '-q', '-h']
+def get_commands(statements, env):
     statements = statements.replace('\n', ' ')
-    statements = statements.replace("{", " { ")
-    statements = statements.replace("}", " } ")
-    statements = statements.replace("[", " [ ")
-    statements = statements.replace("]", " ] ")
-    statements = statements.replace("(", " ( ")
-    statements = statements.replace(")", " ) ")
+    for x in "{}[]()":
+        statements = statements.replace(f"{x}", f" {x} ")
     statements = statements.split(';')
     # After splitting on ; we need to regroup any split subcommands
     # These subcommands are contained within { }
@@ -77,71 +71,105 @@ def get_commands(statements):
                     logic_strings = re.findall('<.*?>', command_args[i])
                     for x in logic_strings:
                         try:
-                            evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], accept_type_errors=True)
+                            evaluated_x = logic_evaluator.interpret(x[1:len(x)-1], user_env=env['measurements_dict'])
                         except logic_evaluator.LogicEvaluatorError as msg:
                             raise ArgumentParserError(msg, error_class='LogicEvaluatorError')      
-                        if evaluated_x != None and not isinstance(evaluated_x, str):
-                            command_args[i] = command_args[i].replace(x, str(evaluated_x))
+                        command_args[i] = command_args[i].replace(x, str(evaluated_x))
             command = {}
-            for keyword, keyword_shortcut in zip(keywords, keyword_shortcuts):
-                if command_args[0] == keyword or command_args[0] == keyword_shortcut:
-                    command = {'cmd' : keyword, 'args' : command_args[1:]}
+            for k in env['keywords_dict'].keys():
+                if command_args[0] == k or (env['keywords_dict'][k]['builtin'] and command_args[0] == env['keywords_dict'][k]['shortcut']):
+                    command = {'cmd' : k, 'args' : command_args[1:]}
                     break
             if not command:
                 raise ArgumentParserError(f"Unrecognised command: {command_args[0]}", error_class='ArgumentParserError')
-            for i in range(1, len(command_args)):
-                if command_args[i] in keywords or command_args[i] in keyword_shortcuts:
-                    raise ArgumentParserError(f"Command {command_args[i]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')
+            # Now we check for other keywords in the command
+            if command['cmd'] == 'pattern':
+                for k in env['keywords_dict'].keys(): 
+                    # Given this is the first argument of the pattern command, we ignore user patterns here as they could be a redefinition.
+                    if env['keywords_dict'][k]['builtin']:
+                        if command_args[1] == k or command_args[1] == env['keywords_dict'][k]['shortcut']:
+                            raise ArgumentParserError(f"Command {command_args[1]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')
+                if len(command_args) > 2:
+                    # Beyond the first argument, anything (including user defined patterns) that is picked up will raise an error. 
+                    for i in range(2, len(command_args)):
+                        for k in env['keywords_dict'].keys():
+                            if command_args[1] == k or (env['keywords_dict'][k]['builtin'] and command_args[1] == env['keywords_dict'][k]['shortcut']):
+                                raise ArgumentParserError(f"Command {command_args[i]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')       
+            else:
+                for i in range(1, len(command_args)):
+                    for k in env['keywords_dict'].keys(): 
+                        if command_args[i] == k or (env['keywords_dict'][k]['builtin'] and command_args[i] == env['keywords_dict'][k]['shortcut']):
+                            raise ArgumentParserError(f"Command {command_args[i]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')  
             commands.append(command)
     return commands
 
 
 def execute_commands(commands, env):
-    keywords = {
-        'new' : {'func' : qcommands.new.command, 'error' : qcommands.new.NewCommandError, 'error_name' : 'NewCommandError'},
-        'join' : {'func' : qcommands.join.command, 'error' : qcommands.join.JoinCommandError, 'error_name' : 'JoinCommandError'},
-        'rename' : {'func' : qcommands.rename.command, 'error' : qcommands.rename.RenameCommandError, 'error_name' : 'RenameCommandError'},
-        'delete' : {'func' : qcommands.delete.command, 'error' : qcommands.delete.DeleteCommandError, 'error_name' : 'DeleteCommandError'},
-        'keep' : {'func' : qcommands.keep.command, 'error' : qcommands.keep.KeepCommandError, 'error_name' : 'KeepCommandError'},
-        'apply' : {'func' : qcommands.apply.command, 'error' : qcommands.apply.ApplyCommandError, 'error_name' : 'ApplyCommandError'},
-        'measure' : {'func' : qcommands.measure.command, 'error' : qcommands.measure.MeasureCommandError, 'error_name' : 'MeasureCommandError'},
-        'state' : {'func' : qcommands.state.command, 'error' : qcommands.state.StateCommandError, 'error_name' : 'StateCommandError'},
-        'circuit' : {'func' : qcommands.circuit.command, 'error' : qcommands.circuit.CircuitCommandError, 'error_name' : 'CircuitCommandError'},
-        'probs' : {'func' : qcommands.probs.command, 'error' : qcommands.probs.ProbabilitiesCommandError, 'error_name' : 'ProbabilitiesCommandError'},
-        'if-then' : {'func' : qcommands.if_then.command, 'error' : qcommands.if_then.IfThenCommandError, 'error_name' : 'IfThenCommandError'},
-        'if-then-else' : {'func' : qcommands.if_then_else.command, 'error' : qcommands.if_then_else.IfThenElseCommandError, 'error_name' : 'IfThenElseCommandError'},
-        'for-each' : {'func' : qcommands.for_each.command, 'error' : qcommands.for_each.ForEachCommandError, 'error_name' : 'ForEachCommandError'},
-        'execute' : {'func' : qcommands.execute.command, 'error' : qcommands.execute.ExecuteCommandError, 'error_name' : 'ExecuteCommandError'},
-        'timer' : {'func' : qcommands.timer.command, 'error' : qcommands.timer.TimerCommandError, 'error_name' : 'TimerCommandError'},
-        'list' : {'func' : qcommands.list.command, 'error' : qcommands.list.ListCommandError, 'error_name' : 'ListCommandError'},
-        'quit' : {'func' : qcommands.quit.command, 'error' : qcommands.quit.QuitCommandError, 'error_name' : 'QuitCommandError'},
-        'help' : {'func' : qcommands.help.command, 'error' : qcommands.help.HelpCommandError, 'error_name' : 'HelpCommandError'},
-    }
     env = copy.deepcopy(env)
     for command in commands:
         try:
             keyword = command['cmd']
-            env = keywords[keyword]['func'](env, command['args'])
-        except keywords[keyword]['error'] as msg:
-            raise ArgumentParserError(msg, error_class=keywords[keyword]['error_name'])
+            if env['keywords_dict'][keyword]['builtin']:
+                env = env['keywords_dict'][keyword]['func'](env, command['args'])
+            else:
+                # User defined pattern
+                env = env['keywords_dict'][keyword]['func'](env, command['args'], keyword, env['keywords_dict'][keyword]['args'], env['keywords_dict'][keyword]['body'], env['keywords_dict'][keyword]['return'])
+        except env['keywords_dict'][keyword]['error'] as msg:
+            raise ArgumentParserError(msg, error_class=env['keywords_dict'][keyword]['error_name'])
     return env
 
 
 def run_commands(statements, env):
     # Turn statements into commands that can be executed
-    commands = get_commands(statements)
+    commands = get_commands(statements, env)
     # Execute the commands and return the modified environment
     env = execute_commands(commands, env)
     return env
 
 
-def program():
+def new_env():
     env = {}
     env['states_dict'] = {}
     env['measurements_dict'] = {}
     env['gates_dict'] = gates.gates_dict
+    env['keywords_dict'] = {
+        'new' : {'shortcut' : '\\n', 'func' : qcommands.new.command, 'error' : qcommands.new.NewCommandError, 'error_name' : 'NewCommandError', 'builtin' : True},
+        'join' : {'shortcut' : '\\j', 'func' : qcommands.join.command, 'error' : qcommands.join.JoinCommandError, 'error_name' : 'JoinCommandError', 'builtin' : True},
+        'rename' : {'shortcut' : '\\r', 'func' : qcommands.rename.command, 'error' : qcommands.rename.RenameCommandError, 'error_name' : 'RenameCommandError', 'builtin' : True},
+        'delete' : {'shortcut' : '\\d', 'func' : qcommands.delete.command, 'error' : qcommands.delete.DeleteCommandError, 'error_name' : 'DeleteCommandError', 'builtin' : True},
+        'keep' : {'shortcut' : '\\k', 'func' : qcommands.keep.command, 'error' : qcommands.keep.KeepCommandError, 'error_name' : 'KeepCommandError', 'builtin' : True},
+        'apply' : {'shortcut' : '\\a', 'func' : qcommands.apply.command, 'error' : qcommands.apply.ApplyCommandError, 'error_name' : 'ApplyCommandError', 'builtin' : True},
+        'measure' : {'shortcut' : '\\m', 'func' : qcommands.measure.command, 'error' : qcommands.measure.MeasureCommandError, 'error_name' : 'MeasureCommandError', 'builtin' : True},
+        'state' : {'shortcut' : '\\s', 'func' : qcommands.state.command, 'error' : qcommands.state.StateCommandError, 'error_name' : 'StateCommandError', 'builtin' : True},
+        'circuit' : {'shortcut' : '\\c', 'func' : qcommands.circuit.command, 'error' : qcommands.circuit.CircuitCommandError, 'error_name' : 'CircuitCommandError', 'builtin' : True},
+        'prob-dist' : {'shortcut' : '\\pd', 'func' : qcommands.prob_dist.command, 'error' : qcommands.prob_dist.ProbDistCommandError, 'error_name' : 'ProbDistCommandError', 'builtin' : True},
+        'if-then' : {'shortcut' : '\\it', 'func' : qcommands.if_then.command, 'error' : qcommands.if_then.IfThenCommandError, 'error_name' : 'IfThenCommandError', 'builtin' : True},
+        'if-then-else' : {'shortcut' : '\\ite', 'func' : qcommands.if_then_else.command, 'error' : qcommands.if_then_else.IfThenElseCommandError, 'error_name' : 'IfThenElseCommandError', 'builtin' : True},
+        'for' : {'shortcut' : '\\f', 'func' : qcommands.for_.command, 'error' : qcommands.for_.ForCommandError, 'error_name' : 'ForCommandError', 'builtin' : True},
+        'while' : {'shortcut' : '\\w', 'func' : qcommands.while_.command, 'error' : qcommands.while_.WhileCommandError, 'error_name' : 'WhileCommandError', 'builtin' : True},
+        'execute' : {'shortcut' : '\\e', 'func' : qcommands.execute.command, 'error' : qcommands.execute.ExecuteCommandError, 'error_name' : 'ExecuteCommandError', 'builtin' : True},
+        'timer' : {'shortcut' : '\\t', 'func' : qcommands.timer.command, 'error' : qcommands.timer.TimerCommandError, 'error_name' : 'TimerCommandError', 'builtin' : True},
+        'list' : {'shortcut' : '\\l', 'func' : qcommands.list.command, 'error' : qcommands.list.ListCommandError, 'error_name' : 'ListCommandError', 'builtin' : True},
+        'quit' : {'shortcut' : '\\q', 'func' : qcommands.quit.command, 'error' : qcommands.quit.QuitCommandError, 'error_name' : 'QuitCommandError', 'builtin' : True},
+        'help' : {'shortcut' : '\\h', 'func' : qcommands.help.command, 'error' : qcommands.help.HelpCommandError, 'error_name' : 'HelpCommandError', 'builtin' : True},
+        'pattern' : {'shortcut' : '\\p', 'func' : qcommands.pattern.command, 'error' : qcommands.pattern.PatternCommandError, 'error_name' : 'PatternCommandError', 'builtin' : True},
+    }
+    env['tags_dict'] = {
+        'new' : {'num_qubits' : ['.nq', '.num-qubits'], 'state_vector' : ['.v', '.vector']},
+        'join' : {'name' : ['.n', '.name']},
+        'keep_delete' : {'states' : ['.s', '.states'], 'measurements' : ['.m', '.measurements']},
+    }
+    # List comprehensions are just nested for loops to get the shortcuts and tags out of the dictionaries and store them in lists. 
+    # These lists are for ease of use and make it so there is only one point where each tag and shortcut is defined.
+    env['shortcuts'] = [env['keywords_dict'][k]['shortcut'] for k in env['keywords_dict'].keys() if env['keywords_dict'][k]['shortcut'] != None]
+    env['tags'] = [tag for cmd in env['tags_dict'].keys() for tag_name in env['tags_dict'][cmd].keys() for tag in env['tags_dict'][cmd][tag_name]]
     env['disp_time'] = False
     env['quit_program'] = False
+    return env
+
+
+def program():
+    env = new_env()
     if sys.argv[1:]:
         for x in sys.argv[1:]:
             try:
@@ -151,37 +179,40 @@ def program():
                 if env['disp_time']:
                     print("Time taken: " + str(end - start) + " seconds")
                 # Clear environment
-                env = {}
-                env['states_dict'] = {}
-                env['measurements_dict'] = {}
-                env['gates_dict'] = gates.gates_dict
-                env['disp_time'] = False
-                env['quit_program'] = False
+                env = new_env()
             except ArgumentParserError as e:
                 print(f"{e.error_class}: {e.message}")                                  
     else:
-        print("Welcome to CmdQuantum, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '##' and then press tab twice.\nEnter 'help' or '-h' for more information regarding commands.\nTo quit the program, enter 'quit' or '-q'.\n")
+        print("Welcome to CmdQuantum, a terminal-based quantum computing simulator. \nTo see a list of available commands, enter '##' and then press tab twice.\nEnter 'help' or '\\h' for more information regarding commands.\nTo quit the program, enter 'quit' or '\\q'.\n")
         readline.parse_and_bind("tab: complete")
-        old_delims = readline.get_completer_delims()
-        readline.set_completer_delims(old_delims.replace('-', ''))
-        readline.set_completer_delims(old_delims.replace('#', ''))
+        readline.set_completer_delims("")
         while not env['quit_program']:
             try:      
+                completer_args = list(env['keywords_dict'].keys()) + env['shortcuts'] + env['tags'] 
+                completer_args += ['##' + x for x in env['keywords_dict']] + ['##' + x for x in env['shortcuts']]
+                completer_args += env['states_dict'].keys()
+                completer_args += env['measurements_dict'].keys()
+                completer_args += env['gates_dict'].keys()
+                
                 def completer(text, state):
-                    keywords = ['new', 'join', 'rename', 'delete', 'keep', 'state', 'circuit', 'probs', 'apply', 'measure', 'timer', 'if-then', 'if-then-else', 'for-each', 'execute', 'list', 'quit', 'help'] 
-                    keyword_shortcuts = ['-n', '-j', '-r', '-d', '-k', '-s', '-c', '-p', '-a', '-m', '-t', '-it', '-ite', '-fe', '-e', '-l', '-q', '-h']
-                    arguments = keywords + keyword_shortcuts
-                    arguments += ['##' + x for x in keywords] + ['##' + x for x in keyword_shortcuts]
-                    arguments += env['states_dict'].keys()
-                    arguments += env['measurements_dict'].keys()
-                    arguments += env['gates_dict'].keys()
-                    options = [i for i in arguments if len(text) > 0 and i.startswith(text)]
+                    original_text = " ".join(text.split())
+                    for x in "{}[]()":
+                        text = text.replace(f"{x}", f" {x} ")
+                    text = text.split()
+                    completed = text[:-1]
+                    to_complete = text[-1]
+                    arguments = completer_args
+                    options = [i for i in arguments if len(to_complete) > 0 and i.startswith(to_complete)]
                     if state < len(options):
-                        return options[state]
+                        if len(completed) > 0:
+                            return f"{original_text[:-len(to_complete)]}{options[state]}"
+                        else: 
+                            return options[state]
                     else:
                         return None
+
                 readline.set_completer(completer)
-                statements = input('#~: ')
+                statements = input('#~: ')                
                 start = time.time()
                 env = run_commands(statements, env)
                 end = time.time()

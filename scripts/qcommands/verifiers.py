@@ -39,8 +39,9 @@ def is_valid_preset_state(p):
 
 
 def is_valid_new_name(s):
-    illegal_chars = re.search("[^0-9a-zA-Z]", s)
-    if illegal_chars:
+    illegal_chars = re.search("[^_0-9a-zA-Z]", s)
+    required_chars = re.search("[_a-zA-Z]", s) # Digits alone is not allowed
+    if illegal_chars or not required_chars:
         return False
     else:
         return True
@@ -144,8 +145,48 @@ def construct_range_list(str_tup):
             return items 
         except ValueError:
             return None
+
+
+def construct_arg_list(str_tup):
+    if str_tup[0] != '(' or str_tup[-1] != ')':
+        return None
+    else:
+        str_tup = str_tup[1:-1]
+    items = str_tup.split(',')
+    cleaned_items = []
+    for x in items:
+        if x.strip() != "":
+            cleaned_items.append(x)
+    items = cleaned_items
+    for i in range(len(items)):
+        items[i] = items[i].strip()
+        illegal_chars = re.search("[^_0-9a-zA-Z]", items[i])
+        some_non_digits = re.search("[_a-zA-Z]", items[i])
+        if (not some_non_digits) or illegal_chars:
+            return None
+    return items 
     
-    
+
+def construct_input_list(str_tup):
+    if str_tup[0] != '(' or str_tup[-1] != ')':
+        return None
+    else:
+        str_tup = str_tup[1:-1]
+    items = str_tup.split(',')
+    cleaned_items = []
+    for x in items:
+        if x.strip() != "":
+            cleaned_items.append(x)
+    items = cleaned_items
+    for i in range(len(items)):
+        items[i] = items[i].strip()
+        illegal_chars = re.search("[^_0-9a-zA-Z]", items[i])
+        some_non_digits = re.search("[_a-zA-Z]", items[i])
+        if illegal_chars:
+            return None
+    return items 
+
+
 def indent_error(error):
     error_list = error.split("\n")
     for i in range(len(error_list)):

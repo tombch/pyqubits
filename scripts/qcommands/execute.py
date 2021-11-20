@@ -17,11 +17,11 @@ def command(env, command_args):
             try:
                 with open(f"{file_name}{extension}", 'r') as file:
                     script = file.read()
-                    print(f"Script: {file_name}{extension}")
                     try:
                         env = main.run_commands(script, env)
                     except main.ArgumentParserError as e:
                         raise ExecuteCommandError(f"While executing '{file_name}', encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")
             except FileNotFoundError:
-                raise ExecuteCommandError(f"File not found: {file_name}")
+                raise ExecuteCommandError(f"File not found: {file_name}{extension}")
+    print(f"Executed: {file_name}{extension}")
     return env

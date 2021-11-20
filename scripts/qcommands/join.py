@@ -18,9 +18,11 @@ def command(env, command_args):
         for x in command_args:
             if v.is_tag(x):
                 tag, value = x.split('=')
-                if tag == '.name':
+                if tag in env['tags_dict']['join']['name']:
                     if v.is_valid_new_name(value):
                         joint_state_name = value
+                    else:
+                        raise JoinCommandError(f"'{value}' cannot be assigned to the {tag} tag. Names cannot be just digits and must only use the characters _, 0-9, a-z, and A-Z.")
                 else: 
                     raise JoinCommandError(f"'{tag}' is not a recognised tag for this command.")
             else:
