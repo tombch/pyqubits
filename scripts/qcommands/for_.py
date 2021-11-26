@@ -1,6 +1,6 @@
 import re
 from .. import main
-from . import verifiers as v
+from .. import utils
 
 
 class ForCommandError(Exception):
@@ -14,9 +14,9 @@ def command(env, command_args):
         i_arg = command_args[0]
         iter_string = command_args[1]
         for_statements = command_args[2]
-        if v.is_letters(i_arg):
-            iterable_tuple = v.construct_range_list(iter_string)
-            iterable_list = v.construct_float_list(iter_string)
+        if utils.is_letters(i_arg):
+            iterable_tuple = utils.construct_range_list(iter_string)
+            iterable_list = utils.construct_list(iter_string)
             if iterable_tuple != None:
                 if iterable_tuple[0] <= iterable_tuple[1]:
                     iterable_tuple[1] += 1
@@ -27,7 +27,7 @@ def command(env, command_args):
                 iterable = iterable_list
             else:
                 raise ForCommandError(f"Invalid iterable: {iter_string}")
-            if not v.is_code_block(for_statements):
+            if not utils.is_code_block(for_statements):
                 raise ForCommandError("For statement is missing braces.")
             else:
                 for_statements = for_statements[1:-1]
@@ -41,11 +41,11 @@ def command(env, command_args):
                             replacement = pattern.replace(i_arg, str(i))
                             for_statements_i = for_statements_i.replace(pattern, replacement)
                     try:
-                        env['measurements_dict'][i_arg] = i
+                        env['measurements_dict'][i_arg] = i.strip()
                         env = main.run_commands(for_statements_i, env)
                         env['measurements_dict'].pop(i_arg)
                     except main.ArgumentParserError as e:
-                        raise ForCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")     
+                        raise ForCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")     
         else:
             raise ForCommandError(f"Invalid dummy variable: {i_arg}")
     return env

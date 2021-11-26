@@ -1,4 +1,4 @@
-from . import verifiers as v
+from .. import utils
 
 
 class MeasureCommandError(Exception):
@@ -13,7 +13,7 @@ def command(env, command_args):
     else:
         s = command_args[0]
         qubits = command_args[1:]
-        if not v.is_existing_state(s, env):
+        if not utils.is_existing_state(s, env):
             raise MeasureCommandError(f"State '{s}' doesn't exist.")
         else:
             s_object = env['states_dict'][s]
@@ -21,7 +21,7 @@ def command(env, command_args):
                 raise MeasureCommandError(f"No qubit reference(s) given for state {s}.")
             else:
                 for q in qubits:
-                    if v.is_valid_qubit_of_state(q, s_object):
+                    if utils.is_valid_qubit_of_state(q, s_object):
                         bit = s_object.measurement(int(q))
                         measurement_number = 1
                         for measurement in env['measurements_dict']:

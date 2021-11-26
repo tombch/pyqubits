@@ -1,6 +1,6 @@
 from .. import logic_evaluator
 from .. import main
-from . import verifiers as v
+from .. import utils
 
 
 class IfThenElseCommandError(Exception):
@@ -14,11 +14,11 @@ def command(env, command_args):
         if_condition = command_args[0]
         then_statements = command_args[1]
         else_statements = command_args[2]
-        if not v.is_code_block(if_condition):
+        if not utils.is_code_block(if_condition):
             raise IfThenElseCommandError("If condition is missing braces.")
-        elif not v.is_code_block(then_statements):
+        elif not utils.is_code_block(then_statements):
             raise IfThenElseCommandError("Then statement is missing braces.")
-        elif not v.is_code_block(else_statements):
+        elif not utils.is_code_block(else_statements):
             raise IfThenElseCommandError("Else statement is missing braces.")
         else:
             if_condition = if_condition[1:-1]
@@ -27,7 +27,7 @@ def command(env, command_args):
             try:          
                 execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['measurements_dict'])
             except logic_evaluator.LogicEvaluatorError as msg:
-                raise IfThenElseCommandError(f"While executing if-then-else statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{v.indent_error(str(msg))}")
+                raise IfThenElseCommandError(f"While executing if-then-else statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{utils.indent_error(str(msg))}")
             try:
                 if execute_then_statements == True:
                     env = main.run_commands(then_statements, env)
@@ -36,5 +36,5 @@ def command(env, command_args):
                 else:
                     raise IfThenElseCommandError("If condition did not evaluate to either True or False.")
             except main.ArgumentParserError as e:
-                raise IfThenElseCommandError(f"While executing if-then-else statement, encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")
+                raise IfThenElseCommandError(f"While executing if-then-else statement, encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")
     return env

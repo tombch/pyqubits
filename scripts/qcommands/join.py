@@ -1,7 +1,7 @@
 import re
 import functools
 from .. import quantum_state
-from . import verifiers as v
+from .. import utils
 
 
 class JoinCommandError(Exception):
@@ -16,17 +16,20 @@ def command(env, command_args):
         states_to_join = []
         states_to_pop = []
         for x in command_args:
-            if v.is_tag(x):
+            if utils.is_tag(x):
                 tag, value = x.split('=')
                 if tag in env['tags_dict']['join']['name']:
-                    if v.is_valid_new_name(value):
-                        joint_state_name = value
+                    if utils.is_valid_new_name(value):
+                        if utils.is_not_builtin(value, env):
+                            joint_state_name = value
+                        else:
+                            raise JoinCommandError(f"'{value}' cannot be assigned to the {tag} tag because '{value}' is a built-in command.")
                     else:
                         raise JoinCommandError(f"'{value}' cannot be assigned to the {tag} tag. Names cannot be just digits and must only use the characters _, 0-9, a-z, and A-Z.")
                 else: 
                     raise JoinCommandError(f"'{tag}' is not a recognised tag for this command.")
             else:
-                if v.is_existing_state(x, env):
+                if utils.is_existing_state(x, env):
                     if x not in states_to_pop:
                         states_to_join.append(env['states_dict'][x])
                         states_to_pop.append(x)

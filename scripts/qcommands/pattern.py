@@ -1,6 +1,6 @@
 import re
 from .. import main
-from . import verifiers as v
+from .. import utils
 
 
 class PatternCommandError(Exception):
@@ -31,7 +31,7 @@ def func(env, input_args, func_name, func_args, func_body, return_args):
             try:
                 func_env = main.run_commands(func_body, func_env)
             except main.ArgumentParserError as e:
-                raise PatternCommandError(f"While executing pattern '{func_name}', encountered {e.error_class}.\n {e.error_class}:{v.indent_error(str(e.message))}")    
+                raise PatternCommandError(f"While executing pattern '{func_name}', encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")    
             inputs_to_return = []
             for i in range(len(func_args)):
                 for j in range(len(return_args)):
@@ -55,13 +55,13 @@ def command(env, command_args):
         func_args = command_args[1]
         func_body = command_args[2]
         return_command = command_args[3:]
-        if v.is_letters(func_name):
-            args_list = v.construct_arg_list(func_args)
+        if utils.is_valid_new_name(func_name) and utils.is_not_builtin(func_name, env):
+            args_list = utils.construct_arg_list(func_args)
             if args_list:
                 for arg in args_list:
                     if arg in env['keywords_dict'].keys():
                         raise PatternCommandError(f"Argument '{arg}' is invalid; it matches a keyword.")
-                if v.is_code_block(func_body):
+                if utils.is_code_block(func_body):
                     if not (return_command and return_command[0] != 'return'):
                         return_args = return_command[1:]
                     else:

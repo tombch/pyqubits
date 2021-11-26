@@ -17,5 +17,4 @@ import scripts.qcommands.keep
 import scripts.qcommands.list
 import scripts.qcommands.quit
 import scripts.qcommands.help
-import scripts.qcommands.verifiers
 import scripts.qcommands.pattern

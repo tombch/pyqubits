@@ -55,7 +55,7 @@ def command(env, command_args):
         for s in objects_to_delete:
             measurements_to_delete = []
             for v in env['measurements_dict']:
-                if v.startswith(f'{s}.'):
+                if utils.startswith(f'{s}.'):
                     measurements_to_delete.append(v)
             for v in measurements_to_delete:
                 del env['measurements_dict'][v]

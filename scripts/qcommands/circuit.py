@@ -1,4 +1,4 @@
-from . import verifiers as v
+from .. import utils
 
 
 class CircuitCommandError(Exception):
@@ -10,7 +10,7 @@ def command(env, command_args):
         raise CircuitCommandError("Expected at least one argument.")
     else:
         for x in command_args:
-            if v.is_existing_state(x, env):
+            if utils.is_existing_state(x, env):
                 env['states_dict'][x].print_circuit()
             else:
                 raise CircuitCommandError(f"State '{x}' doesn't exist.")

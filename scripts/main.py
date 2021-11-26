@@ -6,7 +6,7 @@ import copy
 from . import logic_evaluator
 from . import gates
 from . import qcommands
-from scripts.qcommands import verifiers as v
+from . import utils
 
 
 class ArgumentParserError(Exception):
@@ -67,7 +67,7 @@ def get_commands(statements, env):
             command_args = regroup(command_args, "(", ")", split_char=" ")
             command_args = regroup(command_args, "<", ">", split_char=" ")
             for i in range(len(command_args)):
-                if not v.is_code_block(command_args[i]):
+                if not utils.is_code_block(command_args[i]):
                     logic_strings = re.findall('<.*?>', command_args[i])
                     for x in logic_strings:
                         try:
@@ -93,7 +93,7 @@ def get_commands(statements, env):
                     # Beyond the first argument, anything (including user defined patterns) that is picked up will raise an error. 
                     for i in range(2, len(command_args)):
                         for k in env['keywords_dict'].keys():
-                            if command_args[1] == k or (env['keywords_dict'][k]['builtin'] and command_args[1] == env['keywords_dict'][k]['shortcut']):
+                            if command_args[i] == k or (env['keywords_dict'][k]['builtin'] and command_args[i] == env['keywords_dict'][k]['shortcut']):
                                 raise ArgumentParserError(f"Command {command_args[i]} cannot be an argument of command {command_args[0]} (must be separated by ';').", error_class='ArgumentParserError')       
             else:
                 for i in range(1, len(command_args)):

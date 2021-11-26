@@ -1,5 +1,5 @@
 import re
-from . import verifiers as v
+from .. import utils
 
 
 class RenameCommandError(Exception):
@@ -12,10 +12,10 @@ def command(env, command_args):
     else:
         s = command_args[0]
         new_s = command_args[1]
-        if not v.is_existing_state(s, env):
+        if not utils.is_existing_state(s, env):
             raise RenameCommandError(f"State '{s}' doesn't exist.")
         else:
-            if not v.is_valid_new_name(new_s):
+            if not (utils.is_valid_new_name(new_s) and utils.is_not_builtin(new_s, env)):
                 raise RenameCommandError(f"Invalid state name: {new_s}")
             else:
                 # Get reference to the actual object referenced by its current name

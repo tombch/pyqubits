@@ -32,12 +32,13 @@ def is_valid_num_qubits(n):
 
 
 def is_valid_preset_state(p):
-    if p == 'zero' or p == 'one':
+    if p in ['0', '1']:
         return True
     else:
         return False
 
 
+# This function is used to check any new names, including pattern names
 def is_valid_new_name(s):
     illegal_chars = re.search("[^_0-9a-zA-Z]", s)
     required_chars = re.search("[_a-zA-Z]", s) # Digits alone is not allowed
@@ -45,6 +46,15 @@ def is_valid_new_name(s):
         return False
     else:
         return True
+
+
+# TODO: Might be unnecessary in some places, could be removed
+def is_not_builtin(s, env):
+    builtins = [k for k in env['keywords_dict'].keys() if env['keywords_dict'][k]['builtin']] + env['shortcuts'] + env['tags']
+    if not (s in builtins):
+        return True
+    else:
+        return False
 
 
 def is_existing_state(s, env):
@@ -113,20 +123,20 @@ def construct_int_list(q_list):
         return None
 
 
-def construct_float_list(q_list):
+def construct_list(q_list):
     if q_list[0] != '[' or q_list[-1] != ']':
         return None
     else:
         q_list = q_list[1:-1]
     items = q_list.split(',')  
-    for i in range(len(items)):
-        try:
-            items[i] = int(items[i])    
-        except ValueError:
-            try:
-                items[i] = float(items[i])  
-            except ValueError:
-                return None
+    # for i in range(len(items)):
+    #     try:
+    #         items[i] = int(items[i])    
+    #     except ValueError:
+    #         try:
+    #             items[i] = float(items[i])  
+    #         except ValueError:
+    #             return None
     return items  
 
 
