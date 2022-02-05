@@ -14,5 +14,3 @@ import scripts.qcommands.delete
 import scripts.qcommands.list
 import scripts.qcommands.quit
 import scripts.qcommands.help
-import scripts.qcommands.pattern
-import scripts.qcommands.return_

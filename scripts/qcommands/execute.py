@@ -23,5 +23,5 @@ def command(env, command_args):
                         raise ExecuteCommandError(f"While executing '{file_name}', encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")
             except FileNotFoundError:
                 raise ExecuteCommandError(f"File not found: {file_name}{extension}")
-    print(f"Executed: {file_name}{extension}")
+            print(f"Executed: {file_name}{extension}")
     return env

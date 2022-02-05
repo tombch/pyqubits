@@ -41,9 +41,9 @@ def apply_gate(s, chosen_matrix, gate_char, qubit=1):
     new_wire = ""
     for i in range(0, s.num_qubits):
         if (i+1) == qubit: 
-            new_wire += gate_char+" "*s.w
+            new_wire += gate_char+" "*s.circuit_lane_width
         else:
-            new_wire += "|"+" "*s.w
+            new_wire += "|"+" "*s.circuit_lane_width
     s.update_circuit(new_wire)
 
 
@@ -76,23 +76,23 @@ def apply_cgate(s, chosen_matrix, gate_char, control=1, target=2):
             for i in range(0, s.num_qubits):
                 if (i+1) == control: 
                     gap = "-"
-                    new_wire += "O"+gap*s.w
+                    new_wire += "O"+gap*s.circuit_lane_width
                 elif (i+1) == target:
                     gap = " "                    
-                    new_wire += gate_char+gap*s.w
+                    new_wire += gate_char+gap*s.circuit_lane_width
                 else:
-                    new_wire += "|"+gap*s.w
+                    new_wire += "|"+gap*s.circuit_lane_width
             s.update_circuit(new_wire)
         elif target < control:
             for i in range(0, s.num_qubits):
                 if (i+1) == control: 
                     gap = " "
-                    new_wire += "O"+gap*s.w
+                    new_wire += "O"+gap*s.circuit_lane_width
                 elif (i+1) == target:
                     gap = "-"                    
-                    new_wire += gate_char+gap*s.w
+                    new_wire += gate_char+gap*s.circuit_lane_width
                 else:
-                    new_wire += "|"+gap*s.w
+                    new_wire += "|"+gap*s.circuit_lane_width
             s.update_circuit(new_wire)
     else:
         raise GateError(f"{s.state_name}: controlled gate with control={control}, target={target}: control and target cannot be the same")
@@ -138,11 +138,11 @@ def C_H(s, control, target):
     apply_cgate(s, H_matrix, "H", control, target)
 
 
-def C_P(s, qubit):
+def C_P(s, control, target):
     apply_cgate(s, P_matrix, "P", control, target)
 
 
-def C_T(s, qubit):
+def C_T(s, control, target):
     apply_cgate(s, T_matrix, "T", control, target)
 
 
@@ -160,7 +160,7 @@ def Uf2(s, f_choice=random.randint(1, 4), qubit1=1, qubit2=2):
         U_f_matrix = U_f_matrix_2     
     elif f_choice == 3:
         U_f_matrix = U_f_matrix_3
-    elif f_choice == 4:
+    else:
         U_f_matrix = U_f_matrix_4
     if s.num_qubits < 2:
         raise GateError("{s.state_name}: Cannot apply two-qubit gate Uf2 to a one-qubit state")
@@ -187,7 +187,7 @@ def Uf2(s, f_choice=random.randint(1, 4), qubit1=1, qubit2=2):
         if (i+1) == qubit1: 
             new_wire += "|Uf2"
         else:
-            new_wire += "|"+" "*s.w
+            new_wire += "|"+" "*s.circuit_lane_width
     s.update_circuit(new_wire)
 
 

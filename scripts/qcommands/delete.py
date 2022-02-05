@@ -2,7 +2,6 @@ class DeleteCommandError(Exception):
     pass
 
 
-# TODO: Make better
 def command(env, command_args):
     delete_state_options = env['tags_dict']['delete']['states']
     delete_measurement_options = env['tags_dict']['delete']['measurements']
@@ -10,11 +9,11 @@ def command(env, command_args):
     objects_to_delete = command_args[1:len(command_args)]
     delete_all_states = False
     delete_all_measurements = False
-    # If the first argument is *, delete everything
+    # If the first argument is *, we will delete everything
     if delete_type == '*':
         delete_all_states = True
         delete_all_measurements = True
-    # If the first arg is state or states, and any other arg is *, delete all states
+    # If the first arg is states, and any other arg is *, delete all states
     elif delete_type in delete_state_options:
         if len(objects_to_delete) > 0:
             for x in objects_to_delete:
@@ -23,7 +22,7 @@ def command(env, command_args):
                     break
         else:
             raise DeleteCommandError(f"No state(s) provided.")
-    # If the first arg is measurement or measurements, and any other arg is *, delete all measurements
+    # If the first arg is measurements, and any other arg is *, delete all measurements
     elif delete_type in delete_measurement_options:
         if len(objects_to_delete) > 0:
             for x in objects_to_delete:
@@ -55,7 +54,7 @@ def command(env, command_args):
         for s in objects_to_delete:
             measurements_to_delete = []
             for v in env['measurements_dict']:
-                if utils.startswith(f'{s}.'):
+                if v.startswith(f'{s}.'):
                     measurements_to_delete.append(v)
             for v in measurements_to_delete:
                 del env['measurements_dict'][v]

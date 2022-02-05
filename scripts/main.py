@@ -133,8 +133,6 @@ def new_env():
             'list' : {'func' : qcommands.list.command, 'error' : qcommands.list.ListCommandError, 'error_name' : 'ListCommandError', 'builtin' : True}, # type: ignore
             'quit' : {'func' : qcommands.quit.command, 'error' : qcommands.quit.QuitCommandError, 'error_name' : 'QuitCommandError', 'builtin' : True}, # type: ignore
             'help' : {'func' : qcommands.help.command, 'error' : qcommands.help.HelpCommandError, 'error_name' : 'HelpCommandError', 'builtin' : True}, # type: ignore
-            'pattern' : {'func' : qcommands.pattern.command, 'error' : qcommands.pattern.PatternCommandError, 'error_name' : 'PatternCommandError', 'builtin' : True}, # type: ignore
-            'return' : {'func' : qcommands.return_.command, 'error' : qcommands.return_.ReturnCommandError, 'error_name' : 'ReturnCommandError', 'builtin' : True}, # type: ignore
         },
         'tags_dict' : {
             'new' : {'num_qubits' : ['.nq', '.num-qubits'], 'state_vector' : ['.v', '.vector']},

@@ -120,8 +120,8 @@ class QuantumState:
         one_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_one.conjugate().transpose() @ collapsed_one
         # Dividing each probability by their sum gets the sum of both resulting probabilities (closer) to 1    
         sum_of_probabilities = zero_probability + one_probability
-        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.decimal_places)
-        one_probability = round(one_probability/sum_of_probabilities, QuantumState.decimal_places)
+        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.decimal_places) # type: ignore
+        one_probability = round(one_probability/sum_of_probabilities, QuantumState.decimal_places) # type: ignore
         dice = random.random()
         if dice < zero_probability:
             self.state_vector = collapsed_zero

@@ -99,7 +99,7 @@ def test_construct_int_list():
     assert utils.construct_int_list("[1, 2, 3]") == [1, 2, 3]
     assert utils.construct_int_list("[1,2,3]") == [1, 2, 3]
     
-    assert utils.construct_int_list("[1, 2, 3.0]") == None # TODO: Change this
+    assert utils.construct_int_list("[1, 2, 3.0]") == None # TODO: Does this need changing?
     assert utils.construct_int_list("[]") == None
     assert utils.construct_int_list("(1, 2, 3)") == None
     assert utils.construct_int_list("] [") == None

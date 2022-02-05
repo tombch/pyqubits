@@ -42,7 +42,3 @@ def test_rename():
 
 def test_delete():
     pass
-
-
-def test_keep():
-    pass

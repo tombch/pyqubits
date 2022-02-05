@@ -1,4 +1,3 @@
-import re
 import functools
 from .. import quantum_state
 from .. import utils

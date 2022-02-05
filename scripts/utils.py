@@ -38,7 +38,7 @@ def is_valid_preset_state(p):
         return False
 
 
-# This function is used to check any new names, including pattern names
+# This function is used to check any new names
 def is_valid_new_name(s):
     illegal_chars = re.search("[^_0-9a-zA-Z]", s)
     required_chars = re.search("[_a-zA-Z]", s) # Digits alone is not allowed
