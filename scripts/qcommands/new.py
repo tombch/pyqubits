@@ -1,4 +1,3 @@
-import re
 from .. import quantum_state
 from .. import utils
 
@@ -34,7 +33,7 @@ def command(env, command_args):
                     if utils.is_not_builtin(x, env):
                         new_states.append(x)
                     else:
-                        raise NewCommandError(f"'{x}' cannot be assigned to the {tag} tag because '{x}' is a built-in command.")
+                        raise NewCommandError(f"'{x}' is a built-in command.")
                 else:
                     raise NewCommandError(f"Invalid state name: {x}. Names cannot be just digits and must only use the characters _, 0-9, a-z, and A-Z.")
         for s in new_states:

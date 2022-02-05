@@ -35,6 +35,6 @@ def command(env, command_args):
                     env = main.run_commands(else_statements, env)
                 else:
                     raise IfThenElseCommandError("If condition did not evaluate to either True or False.")
-            except main.ArgumentParserError as e:
+            except main.CommandParserError as e:
                 raise IfThenElseCommandError(f"While executing if-then-else statement, encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")
     return env

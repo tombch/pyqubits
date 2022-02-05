@@ -6,15 +6,13 @@ import scripts.qcommands.prob_dist
 import scripts.qcommands.apply
 import scripts.qcommands.measure
 import scripts.qcommands.rename
-import scripts.qcommands.timer
 import scripts.qcommands.if_then
 import scripts.qcommands.if_then_else
 import scripts.qcommands.for_
-import scripts.qcommands.while_
 import scripts.qcommands.execute
 import scripts.qcommands.delete
-import scripts.qcommands.keep
 import scripts.qcommands.list
 import scripts.qcommands.quit
 import scripts.qcommands.help
 import scripts.qcommands.pattern
+import scripts.qcommands.return_

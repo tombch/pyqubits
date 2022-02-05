@@ -12,9 +12,6 @@ help_message = """---BEGIN COMMAND LIST---
   -d dtype object1 object2..., --delete dtype object1 object2...
         delete states and/or measurements
 
-  -k ktype object1 object2..., --keep ktype object1 object2...
-        keep states and/or measurements
-
   -a gate state qubit(s), --apply gate state qubit(s)
         apply a gate to qubit(s) in a given state
 

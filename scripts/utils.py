@@ -50,7 +50,7 @@ def is_valid_new_name(s):
 
 # TODO: Might be unnecessary in some places, could be removed
 def is_not_builtin(s, env):
-    builtins = [k for k in env['keywords_dict'].keys() if env['keywords_dict'][k]['builtin']] + env['shortcuts'] + env['tags']
+    builtins = [k for k in env['keywords_dict'].keys() if env['keywords_dict'][k]['builtin']] + env['tags']
     if not (s in builtins):
         return True
     else:
@@ -128,15 +128,7 @@ def construct_list(q_list):
         return None
     else:
         q_list = q_list[1:-1]
-    items = q_list.split(',')  
-    # for i in range(len(items)):
-    #     try:
-    #         items[i] = int(items[i])    
-    #     except ValueError:
-    #         try:
-    #             items[i] = float(items[i])  
-    #         except ValueError:
-    #             return None
+    items = [x.strip() for x in q_list.split(',')]
     return items  
 
 
@@ -160,22 +152,19 @@ def construct_range_list(str_tup):
 def construct_arg_list(str_tup):
     if str_tup[0] != '(' or str_tup[-1] != ')':
         return None
-    else:
-        str_tup = str_tup[1:-1]
+    str_tup = str_tup[1:-1]
     items = str_tup.split(',')
     cleaned_items = []
-    for x in items:
-        if x.strip() != "":
-            cleaned_items.append(x)
-    items = cleaned_items
-    for i in range(len(items)):
-        items[i] = items[i].strip()
-        illegal_chars = re.search("[^_0-9a-zA-Z]", items[i])
-        some_non_digits = re.search("[_a-zA-Z]", items[i])
+    for item in items:
+        if item.strip() != "":
+            cleaned_items.append(item.strip())
+    for item in cleaned_items:
+        illegal_chars = re.search("[^_0-9a-zA-Z]", item)
+        some_non_digits = re.search("[_a-zA-Z]", item)
         if (not some_non_digits) or illegal_chars:
             return None
-    return items 
-    
+    return cleaned_items
+
 
 def construct_input_list(str_tup):
     if str_tup[0] != '(' or str_tup[-1] != ')':

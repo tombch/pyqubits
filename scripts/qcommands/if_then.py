@@ -13,24 +13,17 @@ def command(env, command_args):
     else:
         if_condition = command_args[0]
         then_statements = command_args[1]
-        if not utils.is_code_block(if_condition):
-            raise IfThenCommandError("If condition is missing braces.")
-        elif not utils.is_code_block(then_statements):
+        if not utils.is_code_block(then_statements):
             raise IfThenCommandError("Then statement is missing braces.")
         else:
-            if_condition = if_condition[1:-1]
             then_statements = then_statements[1:-1]
-            try:          
-                execute_then_statements = logic_evaluator.interpret(if_condition, user_env=env['measurements_dict'])
-            except logic_evaluator.LogicEvaluatorError as msg:
-                raise IfThenCommandError(f"While executing if-then statement, encountered LogicEvaluatorError.\n LogicEvaluatorError:{utils.indent_error(str(msg))}")
             try:
-                if execute_then_statements == True:
+                if if_condition == "True":
                     env = main.run_commands(then_statements, env)
-                elif execute_then_statements == False:
+                elif if_condition == "False":
                     pass
                 else:
-                    raise IfThenCommandError("If condition did not evaluate to either True or False.")
-            except main.ArgumentParserError as e:
+                    raise IfThenCommandError(f"If condition '{if_condition}' could not be evaluated as either True or False.")
+            except main.CommandParserError as e:
                 raise IfThenCommandError(f"While executing if-then statement, encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")
     return env

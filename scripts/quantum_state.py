@@ -7,9 +7,11 @@ from . import gates
 class QuantumState:
     __slots__ = 'num_qubits', 'num_classical_states', 'state_name', 'state_vector', 'num_actions', 'circuit'
     # Decimal place rounding accuracy (rounding occurs before measurement and when printing states)
-    dp = 16
+    decimal_places = 16
     # Width between wires in quantum circuit when displayed
-    w = 3
+    circuit_lane_width = 3
+    # Dictionary for storing measurement matrices to speed up future measurements done on the same qubit 
+    measurement_matrix_dict = {}
 
     def __init__(self, num_qubits=1, preset_state=None, preset_state_vector=None, state_name=None):
         self.num_qubits = num_qubits
@@ -38,7 +40,7 @@ class QuantumState:
         self.num_actions = 0
         self.circuit = [""]
         for i in range(0, self.num_qubits):
-            self.circuit[0] += f"{(i+1)%10}{' '*QuantumState.w}"     
+            self.circuit[0] += f"{(i+1)%10}{' '*QuantumState.circuit_lane_width}"     
         self.circuit.append(self.blank_circuit_lanes())
 
     # Merges QuantumState object q into the current object
@@ -60,7 +62,7 @@ class QuantumState:
             joint_circuit_length = len(self.circuit)
         merged_circuit = [""]
         for i in range(0, self.num_qubits + q.num_qubits):
-            merged_circuit[0] += f"{(i+1)%10}{' '*QuantumState.w}"
+            merged_circuit[0] += f"{(i+1)%10}{' '*QuantumState.circuit_lane_width}"
         merged_circuit.append(self.blank_circuit_lanes(include_actions=False) + q.blank_circuit_lanes(action_value=0))
         for i in range(2, joint_circuit_length, 2):
             merged_circuit.append(self.circuit[i] + q.circuit[i])
@@ -83,9 +85,9 @@ class QuantumState:
             num_qubits = self.num_qubits
         lanes = ""
         for i in range(0, num_qubits):
-            lanes += f"|{' '*QuantumState.w}"
+            lanes += f"|{' '*QuantumState.circuit_lane_width}"
         if include_actions:
-            lanes += f"{' '*QuantumState.w}[{action_value}]"
+            lanes += f"{' '*QuantumState.circuit_lane_width}[{action_value}]"
         return lanes
 
     def update_circuit(self, new_wire):
@@ -94,27 +96,32 @@ class QuantumState:
         self.circuit.append(self.blank_circuit_lanes())
 
     def measurement(self, qubit=1):
-        if (qubit == 1):
-            measurement_matrix_zero = gates.zero_matrix
-            measurement_matrix_one = gates.one_matrix
+        matrix_string = "-" * (qubit - 1) + "+" + "-" * (self.num_qubits - qubit)
+        if matrix_string in QuantumState.measurement_matrix_dict.keys():
+            measurement_matrix_zero, measurement_matrix_one = QuantumState.measurement_matrix_dict[matrix_string]
         else:
-            measurement_matrix_zero = gates.I_matrix
-            measurement_matrix_one = gates.I_matrix
-        for i in range(2, self.num_qubits+1):
-            if (i == qubit):
-                measurement_matrix_zero = np.kron(measurement_matrix_zero, gates.zero_matrix)
-                measurement_matrix_one = np.kron(measurement_matrix_one, gates.one_matrix)
+            if (qubit == 1):
+                measurement_matrix_zero = gates.zero_matrix
+                measurement_matrix_one = gates.one_matrix
             else:
-                measurement_matrix_zero = np.kron(measurement_matrix_zero, gates.I_matrix)
-                measurement_matrix_one = np.kron(measurement_matrix_one, gates.I_matrix)
+                measurement_matrix_zero = gates.I_matrix
+                measurement_matrix_one = gates.I_matrix
+            for i in range(2, self.num_qubits+1):
+                if (i == qubit):
+                    measurement_matrix_zero = np.kron(measurement_matrix_zero, gates.zero_matrix)
+                    measurement_matrix_one = np.kron(measurement_matrix_one, gates.one_matrix)
+                else:
+                    measurement_matrix_zero = np.kron(measurement_matrix_zero, gates.I_matrix)
+                    measurement_matrix_one = np.kron(measurement_matrix_one, gates.I_matrix)
+            QuantumState.measurement_matrix_dict[matrix_string] = (measurement_matrix_zero, measurement_matrix_one)
         collapsed_zero = measurement_matrix_zero @ self.state_vector
         collapsed_one = measurement_matrix_one @ self.state_vector
         zero_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_zero.conjugate().transpose() @ collapsed_zero
         one_probability = self.state_vector.conjugate().transpose() @ measurement_matrix_one.conjugate().transpose() @ collapsed_one
         # Dividing each probability by their sum gets the sum of both resulting probabilities (closer) to 1    
         sum_of_probabilities = zero_probability + one_probability
-        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.dp)
-        one_probability = round(one_probability/sum_of_probabilities, QuantumState.dp)
+        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.decimal_places)
+        one_probability = round(one_probability/sum_of_probabilities, QuantumState.decimal_places)
         dice = random.random()
         if dice < zero_probability:
             self.state_vector = collapsed_zero
@@ -129,16 +136,16 @@ class QuantumState:
             if (i+1) == qubit: 
                 new_wire += f"M={bit}"+gap
             else:
-                new_wire += "|"+gap*QuantumState.w
+                new_wire += "|"+gap*QuantumState.circuit_lane_width
         self.update_circuit(new_wire)
         return bit
-    
+
     def print_state(self):
         gen_classical_states = ((i, bin(i)[2:].zfill(self.num_qubits)) for i in range(self.num_classical_states))   
         print(f"State vector for {self.state_name} [{self.num_actions}]:")
         first_line = True
         for i, bin_i in gen_classical_states:
-            current_amplitude = round(self.state_vector[i].real, QuantumState.dp) + round(self.state_vector[i].imag, QuantumState.dp) * 1j
+            current_amplitude = round(self.state_vector[i].real, QuantumState.decimal_places) + round(self.state_vector[i].imag, QuantumState.decimal_places) * 1j
             if current_amplitude != 0:
                 if first_line:
                     print(f" {self.state_name} = {current_amplitude} |{bin_i}>")

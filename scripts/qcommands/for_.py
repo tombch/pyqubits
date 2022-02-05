@@ -37,14 +37,14 @@ def command(env, command_args):
                     reg_pattern = f"[^0-9a-zA-Z]{i_arg}[^0-9a-zA-Z]"
                     dummy_vars_needing_spaces = re.findall(reg_pattern, for_statements_i)
                     for pattern in dummy_vars_needing_spaces:
-                        if not ((pattern.strip() in env['keywords_dict'].keys()) or (pattern.strip() in env['shortcuts']) or (pattern.strip() in env['tags'])):
+                        if not ((pattern.strip() in env['keywords_dict'].keys()) or (pattern.strip() in env['tags'])):
                             replacement = pattern.replace(i_arg, str(i))
                             for_statements_i = for_statements_i.replace(pattern, replacement)
                     try:
-                        env['measurements_dict'][i_arg] = i.strip()
+                        env['measurements_dict'][i] = i
                         env = main.run_commands(for_statements_i, env)
-                        env['measurements_dict'].pop(i_arg)
-                    except main.ArgumentParserError as e:
+                        env['measurements_dict'].pop(i)
+                    except main.CommandParserError as e:
                         raise ForCommandError(f"While executing for-each statement, encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")     
         else:
             raise ForCommandError(f"Invalid dummy variable: {i_arg}")

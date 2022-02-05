@@ -19,7 +19,7 @@ def command(env, command_args):
                     script = file.read()
                     try:
                         env = main.run_commands(script, env)
-                    except main.ArgumentParserError as e:
+                    except main.CommandParserError as e:
                         raise ExecuteCommandError(f"While executing '{file_name}', encountered {e.error_class}.\n {e.error_class}:{utils.indent_error(str(e.message))}")
             except FileNotFoundError:
                 raise ExecuteCommandError(f"File not found: {file_name}{extension}")

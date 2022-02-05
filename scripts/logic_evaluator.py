@@ -13,8 +13,6 @@ def new_env():
         'ne' : {'symbol' : '!=', 'value' : operator.__ne__, 'nargs' : 2},
         'lt' : {'symbol' : '<', 'value' : operator.__lt__, 'nargs' : 2},
         'gt' : {'symbol' : '>', 'value' : operator.__gt__, 'nargs' : 2},
-        'leq' : {'symbol' : '<=', 'value' : operator.__le__, 'nargs' : 2},
-        'geq' : {'symbol' : '>=', 'value' : operator.__ge__, 'nargs' : 2},
         'add' : {'symbol' : '+', 'value' : operator.__add__, 'nargs' : 2},
         'subtract' : {'symbol' : '-', 'value' : operator.__sub__, 'nargs' : 2},
         'multiply' : {'symbol' : '*', 'value' : operator.__mul__, 'nargs' : 2},
@@ -94,7 +92,7 @@ def evaluate(expr, env):
                 return evaluate(expr[0], env)
             elif len(expr) == 2:
                 if expr[0] == 'subtract':
-                    # edge case where two different operations share the same symbol
+                    # Edge case where two different operations share the same symbol
                     expr[0] = 'negate'             
                 if env[expr[0]]['nargs'] == 0:
                     raise LogicEvaluatorError(f'Impossible use of value: {env[expr[0]]["symbol"]}') 
@@ -120,8 +118,8 @@ def evaluate(expr, env):
 def interpret(user_input, user_env=None):
     env = new_env()
     if user_env:
-        for v in user_env.values():
-            env.update({v : {'symbol' : v, 'value' : v, 'nargs' : 0}})
+        for k, v in user_env.items():
+            env.update({k : {'symbol' : k, 'value' : v, 'nargs' : 0}})
     tokens = get_tokens(user_input, env)
     expression, i, sub_expr_count, env = get_expression(tokens, env)
     condition = evaluate(expression, env)

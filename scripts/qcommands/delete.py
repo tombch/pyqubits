@@ -4,8 +4,8 @@ class DeleteCommandError(Exception):
 
 # TODO: Make better
 def command(env, command_args):
-    delete_state_options = env['tags_dict']['keep_delete']['states']
-    delete_measurement_options = env['tags_dict']['keep_delete']['measurements']
+    delete_state_options = env['tags_dict']['delete']['states']
+    delete_measurement_options = env['tags_dict']['delete']['measurements']
     delete_type = command_args[0]
     objects_to_delete = command_args[1:len(command_args)]
     delete_all_states = False
