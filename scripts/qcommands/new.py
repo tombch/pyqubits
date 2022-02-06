@@ -25,7 +25,7 @@ def command(env, command_args):
                     if utils.is_valid_preset_state(value):
                         preset_state = value
                     else:
-                        raise NewCommandError(f"'{value}' cannot be assigned to the {tag} tag. Accepted values are: 0, 1, zero, one")
+                        raise NewCommandError(f"'{value}' cannot be assigned to the {tag} tag. Accepted values are: 0, 1")
                 else: 
                     raise NewCommandError(f"'{tag}' is not a recognised tag for this command.")
             else:

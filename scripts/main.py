@@ -135,9 +135,9 @@ def new_env():
             'help' : {'func' : qcommands.help.command, 'error' : qcommands.help.HelpCommandError, 'error_name' : 'HelpCommandError', 'builtin' : True}, # type: ignore
         },
         'tags_dict' : {
-            'new' : {'num_qubits' : ['.nq', '.num-qubits'], 'state_vector' : ['.v', '.vector']},
-            'join' : {'name' : ['.n', '.name']},
-            'delete' : {'states' : ['.s', '.states'], 'measurements' : ['.m', '.measurements']},
+            'new' : {'num_qubits' : ['.qubits'], 'state_vector' : ['.vector']},
+            'join' : {'name' : ['.name']},
+            'delete' : {'states' : ['.states'], 'measurements' : ['.measurements']},
         }
     }
     env['tags'] = [tag for cmd in env['tags_dict'].keys() for tag_name in env['tags_dict'][cmd].keys() for tag in env['tags_dict'][cmd][tag_name]]

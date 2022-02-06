@@ -11,10 +11,10 @@ For dependencies see `requirements.txt`. Once necessary requirements are install
 ```
 Welcome to CmdQuantum, a terminal-based quantum computing simulator. 
 To see a list of available commands, enter '##' and then press tab twice.
-Enter 'help' or '-h' for more information regarding commands.
-To quit the program, enter 'quit' or '-q'.
+Enter 'help' for more information regarding commands.
+To close the program, enter 'quit'.
 
-#~: new q .qubits=2 .preset=zero
+#~: new q .qubits=2 .vector=0
 #~: state q
 State vector for q [0]:
  q = (1+0j) |00>
@@ -31,11 +31,11 @@ State vector for bellstate [2]:
  bellstate = (0.7071067811865475+0j) |00>
            + (0.7071067811865475+0j) |11>
 Probability distribution for bellstate [2]:
- 00	0.5	=========================
- 01	0.0	
- 10	0.0	
- 11	0.5	=========================
-#~: 
+ 00     0.5     |=========================
+ 01     0.0     |
+ 10     0.0     |
+ 11     0.5     |=========================
+#~:
 ```
 
 ### Quantum Teleportation
