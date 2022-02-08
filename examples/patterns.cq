@@ -1,5 +1,0 @@
-pattern show (x) {state x; prob-dist x; circuit x};
-pattern zero_ (x, num) {new x .nq=num .v=zero} return x;
-pattern one_ (x, num) {new x .nq=num .v=one}	return x;	
-pattern bellstate (x, y, z) {new s1 .v=y; new s2 .v=z; join s1 s2 .n=x; apply H x 1; apply CNOT x [1, 2]} return x;
-pattern ifzeroapplygate (s, m, g, qs) {if-then {m == 0} {apply g s qs}} return s;
