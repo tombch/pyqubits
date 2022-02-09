@@ -81,7 +81,7 @@ def validate_qubit(method):
     def wrapped_method(obj, qubit):
         if (not isinstance(qubit, int)) or (not (1 <= qubit <= obj._num_qubits)):
             raise QuantumStateError("'qubit' must be a positive integer, less than or equal to the number of qubits in the state")
-        method(obj, qubit)
+        return method(obj, qubit)
     return wrapped_method
 
 def validate_control_target(method):
@@ -92,10 +92,23 @@ def validate_control_target(method):
             raise QuantumStateError("'target' must be a positive integer, less than or equal to the number of qubits in the state")
         if control == target:
             raise QuantumStateError("'control' and 'target' cannot be the same")
-        method(obj, control, target)
+        return method(obj, control, target)
     return wrapped_method
 
 class QuantumState:
+    '''
+    A class for representing and manipulating multi-qubit states.
+
+    `qubits`: The number of qubits to initialise the state with.
+    `vector`: Set the initial state to a chosen computational basis vector, given as a binary number string of length `qubits`.
+
+    Examples:
+    * `s = QuantumState()`
+    * `s = QuantumState(qubits=2)`
+    * `s = QuantumState(qubits=3, vector='111')`
+    * `s = QuantumState(qubits=5, vector='01000')`
+    '''
+
     __slots__ = '_num_qubits', '_num_classical_states', '_state_vector', '_num_stages', '_circuit'
     # Decimal place rounding accuracy (rounding occurs before measurement and when printing states)
     decimal_places = 16
@@ -108,16 +121,11 @@ class QuantumState:
         self._num_qubits = qubits
         self._num_classical_states = 2**self._num_qubits
         if vector:
-            if vector.upper() == 'ZERO':
-                # The state |00...00>
+            if isinstance(vector, str) and (len(vector) == self._num_qubits) and (not [c for c in vector if c != '0' and c != '1']):
                 self._state_vector = np.zeros(self._num_classical_states) + np.zeros(self._num_classical_states) * 1j
-                self._state_vector[0] = 1
-            elif vector.upper() == 'ONE':
-                # The state |11...11>
-                self._state_vector = np.zeros(self._num_classical_states) + np.zeros(self._num_classical_states) * 1j
-                self._state_vector[-1] = 1
+                self._state_vector[int(vector, 2)] = 1
             else:
-                raise QuantumStateError(f"'vector' cannot be assigned the value: {vector}")
+                raise QuantumStateError(f"'vector' must be a binary number string of length {self._num_qubits}")
         else:
             # A state vector is created with random values from the unit circle around the origin
             self._state_vector = (2*np.random.random(self._num_classical_states)-1) + (2*np.random.random(self._num_classical_states)-1) * 1j
@@ -131,6 +139,69 @@ class QuantumState:
             lane.append((i + 1) % 10)
         self._circuit.append(lane)
         self._circuit.append(self._empty_circuit_row())
+
+    def _empty_circuit_row(self):
+        lanes = []
+        for _ in range(0, self._num_qubits):
+            lanes.append("|")
+        lanes.append(self._num_stages)
+        return lanes
+    
+    def _update_circuit(self, new_wire):
+        self._num_stages += 1
+        self._circuit.append(new_wire)
+        self._circuit.append(self._empty_circuit_row())
+
+    def _apply_gate(self, chosen_matrix, gate_char, qubit):
+        if (qubit == 1):
+            gate_matrix = chosen_matrix
+        else:
+            gate_matrix = I_matrix
+        for i in range(2, self._num_qubits+1):
+            if (i == qubit):
+                gate_matrix = np.kron(gate_matrix, chosen_matrix)
+            else:
+                gate_matrix = np.kron(gate_matrix, I_matrix)
+        self._state_vector = gate_matrix @ self._state_vector
+        new_wire = []
+        for i in range(0, self._num_qubits):
+            if (i+1) == qubit: 
+                new_wire.append(gate_char)
+            else:
+                new_wire.append("|")
+        self._update_circuit(new_wire)
+
+    def _apply_cgate(self, chosen_matrix, gate_char, control, target):
+        if (control == 1):
+            gate_matrix_a = zero_matrix
+            gate_matrix_b = one_matrix
+        elif (target == 1):
+            gate_matrix_a = I_matrix
+            gate_matrix_b = chosen_matrix
+        else:
+            gate_matrix_a = I_matrix
+            gate_matrix_b = I_matrix
+        for i in range(2, self._num_qubits+1):
+            if (i == control):
+                gate_matrix_a = np.kron(gate_matrix_a, zero_matrix)
+                gate_matrix_b = np.kron(gate_matrix_b, one_matrix)
+            elif (i == target):
+                gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
+                gate_matrix_b = np.kron(gate_matrix_b, chosen_matrix)         
+            else:
+                gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
+                gate_matrix_b = np.kron(gate_matrix_b, I_matrix)
+        gate_matrix = np.add(gate_matrix_a, gate_matrix_b)
+        self._state_vector = gate_matrix @ self._state_vector
+        new_wire = []
+        for i in range(0, self._num_qubits):
+            if (i+1) == control: 
+                new_wire.append("O")
+            elif (i+1) == target:
+                new_wire.append(gate_char)
+            else:
+                new_wire.append("|")
+        self._update_circuit(new_wire)
 
     # def __mul__(self, q): 
     #     # Merge circuits first because this requires using attributes from both objects
@@ -209,20 +280,11 @@ class QuantumState:
             circuit_string += f'{row_string}\n'
         return circuit_string[:-1]
 
-    def _empty_circuit_row(self):
-        lanes = []
-        for _ in range(0, self._num_qubits):
-            lanes.append("|")
-        lanes.append(self._num_stages)
-        return lanes
-    
-    def _update_circuit(self, new_wire):
-        self._num_stages += 1
-        self._circuit.append(new_wire)
-        self._circuit.append(self._empty_circuit_row())
-
     @validate_qubit
     def measure(self, qubit : int):
+        '''
+        Measure a `qubit` within the quantum state, and return the result.
+        '''
         if (qubit == 1):
             measurement_matrix_zero = zero_matrix
             measurement_matrix_one = one_matrix
@@ -261,104 +323,86 @@ class QuantumState:
         self._update_circuit(new_wire)
         return bit
 
-    def _apply_gate(self, chosen_matrix, gate_char, qubit):
-        if (qubit == 1):
-            gate_matrix = chosen_matrix
-        else:
-            gate_matrix = I_matrix
-        for i in range(2, self._num_qubits+1):
-            if (i == qubit):
-                gate_matrix = np.kron(gate_matrix, chosen_matrix)
-            else:
-                gate_matrix = np.kron(gate_matrix, I_matrix)
-        self._state_vector = gate_matrix @ self._state_vector
-        new_wire = []
-        for i in range(0, self._num_qubits):
-            if (i+1) == qubit: 
-                new_wire.append(gate_char)
-            else:
-                new_wire.append("|")
-        self._update_circuit(new_wire)
-
-    def _apply_cgate(self, chosen_matrix, gate_char, control, target):
-        if (control == 1):
-            gate_matrix_a = zero_matrix
-            gate_matrix_b = one_matrix
-        elif (target == 1):
-            gate_matrix_a = I_matrix
-            gate_matrix_b = chosen_matrix
-        else:
-            gate_matrix_a = I_matrix
-            gate_matrix_b = I_matrix
-        for i in range(2, self._num_qubits+1):
-            if (i == control):
-                gate_matrix_a = np.kron(gate_matrix_a, zero_matrix)
-                gate_matrix_b = np.kron(gate_matrix_b, one_matrix)
-            elif (i == target):
-                gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
-                gate_matrix_b = np.kron(gate_matrix_b, chosen_matrix)         
-            else:
-                gate_matrix_a = np.kron(gate_matrix_a, I_matrix)
-                gate_matrix_b = np.kron(gate_matrix_b, I_matrix)
-        gate_matrix = np.add(gate_matrix_a, gate_matrix_b)
-        self._state_vector = gate_matrix @ self._state_vector
-        new_wire = []
-        for i in range(0, self._num_qubits):
-            if (i+1) == control: 
-                new_wire.append("O")
-            elif (i+1) == target:
-                new_wire.append(gate_char)
-            else:
-                new_wire.append("|")
-        self._update_circuit(new_wire)
-
     @validate_qubit
     def X(self, qubit : int):
+        '''
+        Apply the X gate to a `qubit` within the quantum state.
+        '''
         self._apply_gate(X_matrix, "X", qubit)
+        return self
 
     @validate_qubit
     def Y(self, qubit : int):
+        '''
+        Apply the Y gate to a `qubit` within the quantum state.
+        '''
         self._apply_gate(Y_matrix, "Y", qubit)
+        return self
 
     @validate_qubit
     def Z(self, qubit : int):
+        '''
+        Apply the Z gate to a `qubit` within the quantum state.
+        '''
         self._apply_gate(Z_matrix, "Z", qubit)
+        return self
 
     @validate_qubit
     def H(self, qubit : int):
+        '''
+        Apply the H gate to a `qubit` within the quantum state.
+        '''
         self._apply_gate(H_matrix, "H", qubit)
+        return self
 
     @validate_qubit
     def P(self, qubit : int):
+        '''
+        Apply the P gate to a `qubit` within the quantum state.
+        '''
         self._apply_gate(P_matrix, "P", qubit)
+        return self
 
     @validate_qubit
     def T(self, qubit : int):
+        '''
+        Apply the T gate to a `qubit` within the quantum state.
+        '''
         self._apply_gate(T_matrix, "T", qubit)
+        return self
 
     @validate_control_target
     def CNOT(self, control : int, target : int):
+        '''
+        Apply the CNOT gate to a `control` qubit and `target` qubit within the quantum state.
+        '''
         self._apply_cgate(X_matrix, "X", control, target)
+        return self
 
     @validate_control_target
     def C_Y(self, control : int, target : int):
         self._apply_cgate(Y_matrix, "Y", control, target)
+        return self
 
     @validate_control_target
     def C_Z(self, control : int, target : int):
         self._apply_cgate(Z_matrix, "Z", control, target)
+        return self
 
     @validate_control_target
     def C_H(self, control : int, target : int):
         self._apply_cgate(H_matrix, "H", control, target)
+        return self
 
     @validate_control_target
     def C_P(self, control : int, target : int):
         self._apply_cgate(P_matrix, "P", control, target)
+        return self
 
     @validate_control_target
     def C_T(self, control : int, target : int):
         self._apply_cgate(T_matrix, "T", control, target)
+        return self
 
     def swap(self, qubit1 : int, qubit2 : int):
         if (not isinstance(qubit1, int)) or (not (1 <= qubit1 <= self._num_qubits)):
@@ -370,6 +414,7 @@ class QuantumState:
         self.CNOT(qubit1, qubit2)
         self.CNOT(qubit2, qubit1)
         self.CNOT(qubit1, qubit2)
+        return self
 
     def Uf2(self, qubit1 : int, qubit2 : int, f : int = random.randint(1, 4)):
         if (not isinstance(qubit1, int)) or (not (1 <= qubit1 <= self._num_qubits)):
@@ -409,3 +454,4 @@ class QuantumState:
             else:
                 new_wire.append("|")
         self._update_circuit(new_wire) 
+        return self
