@@ -1,15 +1,13 @@
-from pyquantum import QuantumState
+from pyqubits import QuantumState
+
 
 def main():
-    s = QuantumState(n=2, bits='00')
+    s = QuantumState.from_bits('00')
     print(s)
-
-    s.H(qubit=1)
-    s.CNOT(control=1, target=2)    
-    bit = s.measure(qubit=1).bit
-    s.vector
-    print(f'Measured first qubit, received {bit}')
-    print(s)
+    print(s.H(qubit = 1))
+    print(s.CNOT(control = 1, target = 2))
+    print(s.measure(qubit = 1))    
+    print(f'Measured first qubit, received {s.bit}')
     print(s.dist)
     print(s.circuit)
 
