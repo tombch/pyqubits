@@ -109,14 +109,14 @@ def validate_qubits(method):
             # If the argument type is not an integer, then it is not a qubit argument so can be ignored
             if arg_types.get(name) == int:
                 if (not isinstance(value, int)) or (not (1 <= value <= obj._num_qubits)):
-                    raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of n in the state")
+                    raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of qubits in the state")
         
         # Validate keyword arguments
         for name, value in kwargs.items():
             # If the argument type is not an integer, then it is not a qubit argument so can be ignored
             if arg_types.get(name) == int:
                 if (not isinstance(value, int)) or (not (1 <= value <= obj._num_qubits)):
-                    raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of n in the state")
+                    raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of qubits in the state")
         
         # Return the original method, with its (now validated) original arguments
         return method(obj, *args, **kwargs)
