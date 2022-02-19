@@ -84,10 +84,10 @@ f_bal_0 = np.array([
 
 
 f_bal_1 = np.array([
-    [1+0j, 0+0j, 0+0j, 0+0j], 
     [0+0j, 1+0j, 0+0j, 0+0j], 
-    [0+0j, 0+0j, 0+0j, 1+0j], 
-    [0+0j, 0+0j, 1+0j, 0+0j]
+    [1+0j, 0+0j, 0+0j, 0+0j], 
+    [0+0j, 0+0j, 1+0j, 0+0j], 
+    [0+0j, 0+0j, 0+0j, 1+0j]
 ])
 
 
@@ -95,7 +95,6 @@ class QuantumStateError(Exception):
     pass
 
 
-# TODO: improve
 def validate_qubits(method):
     '''
     This decorator checks that the integer arguments of a `QuantumState` method (which are assumed to be qubits) are valid. 
@@ -108,14 +107,13 @@ def validate_qubits(method):
         # Validate positional arguments
         for name, value in zip(arg_names, args):
             # If the argument type is not an integer, then it is not a qubit argument so can be ignored
-            if arg_types[name] == int:
+            if arg_types.get(name) == int:
                 if (not isinstance(value, int)) or (not (1 <= value <= obj._num_qubits)):
                     raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of n in the state")
         
         # Validate keyword arguments
         for name, value in kwargs.items():
             # If the argument type is not an integer, then it is not a qubit argument so can be ignored
-            # TODO: Don't forget to use .get() more often
             if arg_types.get(name) == int:
                 if (not isinstance(value, int)) or (not (1 <= value <= obj._num_qubits)):
                     raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of n in the state")
@@ -128,20 +126,20 @@ def validate_qubits(method):
 
 # TODO: Test this against previous gate application method
 @nb.njit(fastmath=True, parallel=True)
-def memkron(gates, state, num_qubits, num_classical_states, binary_values):
+def memkron(gates, state, binary_values):
     '''
     Apply gate(s) to qubit(s) in the state, without creating an enormous matrix in the process
     '''
-    new_state = [0+0j for _ in range(num_classical_states)]
-    for i in nb.prange(num_classical_states):
-        dot = 0
-        for j in nb.prange(num_classical_states):
+    new_state = [0+0j for _ in range(len(state))]
+    for i in nb.prange(len(state)):
+        for j in nb.prange(len(state)):
             val = 1
-            for k in range(num_qubits):
+            for k in range(len(gates)):
                 val *= gates[k][binary_values[i][k]][binary_values[j][k]]
-            dot += val * state[j]
-        new_state[i] += dot
+            new_state[i] += val * state[j]
     return new_state
+# Force compile on import
+memkron(np.asarray([I_matrix]), np.asarray([1.+0.j, 0.+0.j]), np.asarray([[0], [1]]))
 
 
 class QuantumState:
@@ -255,6 +253,9 @@ class QuantumState:
             joined._circuit[i].extend(wire)
         return joined
 
+    # TODO: I have witnessed very small values get displayed as empty components. 
+    # E.g. on deutsch algorithm with initial qubits set to 10 instead of 01. 
+    # ???
     def __str__(self):
         amplitudes = []
         for amp in self._state_vector: # type: ignore - genuinely nothing I can do here. Thinks np.random.random makes a complex number instead of an array
@@ -302,7 +303,6 @@ class QuantumState:
             dist_string += f"{bin_i}\t{round(abs(self._state_vector[i])**2, 2)}\t|{'=' * int(round(50 * abs(self._state_vector[i])**2))}\n" # type: ignore
         return dist_string[:-1]
         
-
     @property
     def circuit(self):
         '''
@@ -348,7 +348,94 @@ class QuantumState:
                 gates.append(I_matrix)
         gates = np.asarray(gates)
         binary_values = np.asarray([[int(x) for x in bin(i)[2:].zfill(self._num_qubits)] for i in range(self._num_classical_states)])
-        self._state_vector = np.asarray(memkron(gates, self._state_vector, self._num_qubits, self._num_classical_states, binary_values))
+        self._state_vector = np.asarray(memkron(gates, self._state_vector, binary_values))
+    
+    def _apply_2gate(self, gate, qubit1, qubit2):
+        gates = []
+        gate_sizes = []
+        gate_at_pos = []
+        gate_num = 0
+        for i in range(1, self._num_qubits+1):
+            if i == qubit1:
+                gates.append(gate)
+                gate_sizes.append(len(gate))
+                gate_at_pos.append(gate_num)
+            elif i == qubit2:
+                gate_at_pos.append(gate_num)
+                gate_num += 1
+            else:
+                gates.append(np.pad(I_matrix, (0, len(gate) - len(I_matrix)), mode='constant'))
+                gate_sizes.append(len(I_matrix))
+                gate_at_pos.append(gate_num)
+                gate_num += 1
+        binary_values = []
+        for i in range(self._num_classical_states):
+            position = 0
+            bin_list = []
+            current_bin = bin(i)[2:].zfill(self._num_qubits)
+            while position < self._num_qubits:
+                num_qubits_for_gate = int(math.log2(gate_sizes[gate_at_pos[position]]))
+                bin_list.append(int(current_bin[position:position+num_qubits_for_gate], base=2))
+                position += num_qubits_for_gate
+            binary_values.append(bin_list)
+        gates = np.asarray(gates)
+        binary_values = np.asarray(binary_values)
+        self._state_vector = np.asarray(memkron(gates, self._state_vector, binary_values))
+
+    def _apply_cgate(self, gate, control, target):
+        gates_a = []
+        gates_b = []
+        for i in range(1, self._num_qubits+1):
+            if i == control:
+                gates_a.append(zero_matrix)
+                gates_b.append(one_matrix)
+            elif i == target:
+                gates_a.append(I_matrix)
+                gates_b.append(gate)
+            else:
+                gates_a.append(I_matrix)
+                gates_b.append(I_matrix)
+        gates_a = np.asarray(gates_a)
+        gates_b = np.asarray(gates_b)
+        binary_values = np.asarray([[int(x) for x in bin(i)[2:].zfill(self._num_qubits)] for i in range(self._num_classical_states)])
+        state_vector_a = np.asarray(memkron(gates_a, self._state_vector, binary_values))
+        state_vector_b = np.asarray(memkron(gates_b, self._state_vector, binary_values))
+        self._state_vector = np.add(state_vector_a, state_vector_b)
+
+    def _apply_measure(self, qubit):
+        gates_zero = []
+        gates_one = []
+        for i in range(1, self._num_qubits+1):
+            if i == qubit:
+                gates_zero.append(zero_matrix)
+                gates_one.append(one_matrix)
+            else:
+                gates_zero.append(I_matrix)
+                gates_one.append(I_matrix)
+        gates_zero = np.asarray(gates_zero)
+        gates_one = np.asarray(gates_one)
+        binary_values = np.asarray([[int(x) for x in bin(i)[2:].zfill(self._num_qubits)] for i in range(self._num_classical_states)])
+        # Determine measurement vectors
+        collapsed_zero = np.asarray(memkron(gates_zero, self._state_vector, binary_values))
+        collapsed_one = np.asarray(memkron(gates_one, self._state_vector, binary_values))
+        # Determine probabilities for each measurement
+        zero_probability = sum((abs(x)**2 for i, x in enumerate(self._state_vector) if binary_values[i][qubit-1] == 0)) # type: ignore
+        one_probability = sum((abs(x)**2 for i, x in enumerate(self._state_vector) if binary_values[i][qubit-1] == 1)) # type: ignore
+        # Dividing each probability by their sum gets the sum of both resulting probabilities (closer) to 1    
+        sum_of_probabilities = zero_probability + one_probability
+        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.decimal_places) # type: ignore
+        one_probability = round(one_probability/sum_of_probabilities, QuantumState.decimal_places) # type: ignore
+        # Collapse the state vector
+        rand = random.uniform(0, 1)
+        if rand <= zero_probability:
+            self._state_vector = collapsed_zero
+            bit = 0
+        else:
+            self._state_vector = collapsed_one
+            bit = 1
+        # Normalise the state vector and save the measured bit
+        self._state_vector = self._state_vector/np.linalg.norm(self._state_vector)
+        self._bit = bit
 
     def _register_gate(self, gate_char, qubit):
         operations = []
@@ -360,29 +447,23 @@ class QuantumState:
             operations.append(' ') # Empty space between qubit wires
         self._update_circuit(operations)
 
-    # TODO: numba-ise this
-    def _apply_cgate(self, gate, control, target):
-        if (control == 1):
-            matrix_a = zero_matrix
-            matrix_b = one_matrix
-        elif (target == 1):
-            matrix_a = I_matrix
-            matrix_b = gate
-        else:
-            matrix_a = I_matrix
-            matrix_b = I_matrix
-        for i in range(2, self._num_qubits+1):
-            if (i == control):
-                matrix_a = np.kron(matrix_a, zero_matrix)
-                matrix_b = np.kron(matrix_b, one_matrix)
-            elif (i == target):
-                matrix_a = np.kron(matrix_a, I_matrix)
-                matrix_b = np.kron(matrix_b, gate)         
+    def _register_2gate(self, gate_name, qubit1, qubit2):
+        operations = []
+        inbetween_gate = False
+        for i in range(0, self._num_qubits):
+            if (i+1) == qubit1: 
+                inbetween_gate = not inbetween_gate
+                operations.append(['|'] + ['-'] * len(gate_name) + ['|']) 
+            elif (i+1) == qubit2:
+                inbetween_gate = not inbetween_gate
+                operations.append(['|'] + ['-'] * len(gate_name) + ['|']) 
             else:
-                matrix_a = np.kron(matrix_a, I_matrix)
-                matrix_b = np.kron(matrix_b, I_matrix)
-        matrix = np.add(matrix_a, matrix_b)
-        self._state_vector = matrix @ self._state_vector
+                operations.append(['-'] * (len(gate_name) + 2))    
+            if inbetween_gate:
+                operations.append(['|'] +  [x for x in gate_name] + ['|'])
+            else:
+                operations.append([' '] * (len(gate_name) + 2)) # Empty space between qubit wires
+        self._update_circuit(operations)
 
     def _register_cgate(self, gate_char, control, target):
         operations = []
@@ -410,44 +491,8 @@ class QuantumState:
         '''
         Measure a `qubit` within the quantum state.
         '''
-        if (qubit == 1):
-            measurement_matrix_zero = zero_matrix
-            measurement_matrix_one = one_matrix
-        else:
-            measurement_matrix_zero = I_matrix
-            measurement_matrix_one = I_matrix
-        for i in range(2, self._num_qubits+1):
-            if (i == qubit):
-                measurement_matrix_zero = np.kron(measurement_matrix_zero, zero_matrix)
-                measurement_matrix_one = np.kron(measurement_matrix_one, one_matrix)
-            else:
-                measurement_matrix_zero = np.kron(measurement_matrix_zero, I_matrix)
-                measurement_matrix_one = np.kron(measurement_matrix_one, I_matrix)
-        collapsed_zero = measurement_matrix_zero @ self._state_vector
-        collapsed_one = measurement_matrix_one @ self._state_vector
-        zero_probability = self._state_vector.conjugate().transpose() @ measurement_matrix_zero.conjugate().transpose() @ collapsed_zero # type: ignore
-        one_probability = self._state_vector.conjugate().transpose() @ measurement_matrix_one.conjugate().transpose() @ collapsed_one # type: ignore
-        # Dividing each probability by their sum gets the sum of both resulting probabilities (closer) to 1    
-        sum_of_probabilities = zero_probability + one_probability
-        zero_probability = round(zero_probability/sum_of_probabilities, QuantumState.decimal_places) # type: ignore
-        one_probability = round(one_probability/sum_of_probabilities, QuantumState.decimal_places) # type: ignore
-        rand = random.random()
-        if rand < zero_probability:
-            self._state_vector = collapsed_zero
-            bit = 0
-        else:
-            self._state_vector = collapsed_one
-            bit = 1
-        self._state_vector = self._state_vector/np.linalg.norm(self._state_vector)
-        operations = []
-        for i in range(0, self._num_qubits):
-            if (i+1) == qubit: 
-                operations.append(str(bit))
-            else:
-                operations.append("-")
-            operations.append(' ') # Empty space between qubit wires
-        self._update_circuit(operations)
-        self._bit = bit
+        self._apply_measure(qubit)
+        self._register_gate(str(self._bit), qubit)
         return self
 
     @validate_qubits
@@ -573,45 +618,19 @@ class QuantumState:
         return self
 
     @validate_qubits
-    def Uf2(self, qubit1 : int, qubit2 : int, f : str):
+    def f2(self, qubit1 : int, qubit2 : int, f : str):
         if qubit1 + 1 != qubit2:
             raise QuantumStateError("'qubit1' must be one less than 'qubit2'")  
         if f == 'const0':
-            U_f_matrix = f_const_0
+            f_matrix = f_const_0
         elif f == 'const1':
-            U_f_matrix = f_const_1  
+            f_matrix = f_const_1  
         elif f == 'bal0':
-            U_f_matrix = f_bal_0
+            f_matrix = f_bal_0
         elif f == 'bal1':
-            U_f_matrix = f_bal_1
+            f_matrix = f_bal_1
         else:
             raise QuantumStateError(f"invalid choice of 'f'")
-        if (qubit1 == 1):
-            matrix = U_f_matrix
-        else:
-            matrix = I_matrix
-        for i in range(2, self._num_qubits+1):
-            if (i == qubit1):
-                matrix = np.kron(matrix, U_f_matrix)
-            elif (i == qubit2): 
-                continue
-            else:
-                matrix = np.kron(matrix, I_matrix)
-        self._state_vector = matrix @ self._state_vector
-        operations = []
-        inbetween_gate = False
-        for i in range(0, self._num_qubits):
-            if (i+1) == qubit1: 
-                inbetween_gate = not inbetween_gate
-                operations.append(['|', '-', '-', '-', '|']) 
-            elif (i+1) == qubit2:
-                inbetween_gate = not inbetween_gate
-                operations.append(['|', '-', '-', '-', '|'])
-            else:
-                operations.append(['-', '-', '-', '-', '-'])    
-            if inbetween_gate:
-                operations.append(['|', 'U', 'f', '2', '|'])
-            else:
-                operations.append([' ', ' ', ' ', ' ', ' ']) # Empty space between qubit wires
-        self._update_circuit(operations) 
+        self._apply_2gate(f_matrix, qubit1, qubit2)
+        self._register_2gate('f2', qubit1, qubit2)
         return self
