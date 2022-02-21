@@ -46,10 +46,10 @@ def _test_gate(gate, gate_attr):
         for j in range(1, i+1):
             state_1 = pyqubits.QuantumState(n=i)
             state_2 = pyqubits.QuantumState.from_vector(state_1.vector) # type: ignore
-            np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-16)
+            np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)
             state_1 = getattr(state_1, gate_attr)(j)
             state_2 = apply_gate(gate, state_2, j)
-            np.testing.assert_allclose(state_1.vector, state_2.vector)    
+            np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)    
 
 
 def _test_cgate(gate, gate_attr):
@@ -59,10 +59,10 @@ def _test_cgate(gate, gate_attr):
                 if j != k:
                     state_1 = pyqubits.QuantumState(n=i)
                     state_2 = pyqubits.QuantumState.from_vector(state_1.vector) # type: ignore
-                    np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-16)
+                    np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)
                     state_1 = getattr(state_1, gate_attr)(j, k)
                     state_2 = apply_cgate(gate, state_2, j, k)
-                    np.testing.assert_allclose(state_1.vector, state_2.vector)   
+                    np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)   
 
 
 def test_X():
