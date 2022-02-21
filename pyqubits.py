@@ -350,17 +350,17 @@ class QuantumState:
         binary_values = np.asarray([[int(x) for x in bin(i)[2:].zfill(self._num_qubits)] for i in range(self._num_classical_states)])
         self._state_vector = np.asarray(memkron(gates, self._state_vector, binary_values))
     
-    def _apply_2gate(self, gate, qubit1, qubit2):
+    def _apply_multigate(self, *args, gate):
         gates = []
         gate_sizes = []
         gate_at_pos = []
         gate_num = 0
         for i in range(1, self._num_qubits+1):
-            if i == qubit1:
+            if i == args[0]: # First qubit
                 gates.append(gate)
                 gate_sizes.append(len(gate))
                 gate_at_pos.append(gate_num)
-            elif i == qubit2:
+            elif i == args[-1]: # Last qubit, or in the case of len(args) = 1, also the first qubit
                 gate_at_pos.append(gate_num)
                 gate_num += 1
             else:
@@ -447,7 +447,7 @@ class QuantumState:
             operations.append(' ') # Empty space between qubit wires
         self._update_circuit(operations)
 
-    def _register_2gate(self, gate_name, qubit1, qubit2):
+    def _register_multigate(self, gate_name, qubit1, qubit2):
         operations = []
         inbetween_gate = False
         for i in range(0, self._num_qubits):
@@ -631,6 +631,6 @@ class QuantumState:
             f_matrix = f_bal_1
         else:
             raise QuantumStateError(f"invalid choice of 'f'")
-        self._apply_2gate(f_matrix, qubit1, qubit2)
-        self._register_2gate('f2', qubit1, qubit2)
+        self._apply_multigate(qubit1, qubit2, gate=f_matrix)
+        self._register_multigate('f2', qubit1, qubit2)
         return self
