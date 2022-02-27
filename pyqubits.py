@@ -3,6 +3,7 @@ import random
 import inspect
 import numpy as np
 import numba as nb
+from numbers import Number
 
 
 zero_matrix = np.array([
@@ -124,7 +125,6 @@ def validate_qubits(method):
     return wrapped_method
 
 
-# TODO: Test this against previous gate application method
 @nb.njit(fastmath=True, parallel=True)
 def memkron(gates, state, binary_values):
     '''
@@ -156,7 +156,7 @@ class QuantumState:
         self._num_qubits = n
         self._num_classical_states = 2**self._num_qubits
         # A state vector is created with random values from the unit circle around the origin
-        self._state_vector = (2 * np.random.random(self._num_classical_states) - 1) + ( 2 * np.random.random(self._num_classical_states) - 1) * 1j # complex128
+        self._state_vector = np.asarray((2 * np.random.random(self._num_classical_states) - 1) + ( 2 * np.random.random(self._num_classical_states) - 1) * 1j) # complex128
         # The vector is normalised
         self._state_vector = self._state_vector / np.linalg.norm(self._state_vector)
         self._bit = None
@@ -176,16 +176,25 @@ class QuantumState:
         obj._init_circuit()
         return obj
 
-    # TODO: Validate array
     @classmethod
     def from_vector(cls, vector : np.ndarray):
         '''
-        Construct a `QuantumState` object from a pre-existing NumPy array.
+        Construct a `QuantumState` object from a vector (this could be a NumPy array or a list).
+        The vector is normalised to ensure it is a valid state.
         '''
         obj = cls()
+        if not isinstance(vector, np.ndarray) and not isinstance(vector, list):
+            raise QuantumStateError("'vector' must be either a NumPy array or a list")
+        if len(vector) <= 1 or int(math.log2(len(vector))) != math.log2(len(vector)):
+            raise QuantumStateError("The vector's length must be greater than one, and can only be a power of two")
+        for x in vector:
+            if not isinstance(x, Number):
+                raise QuantumStateError(f"Elements of 'vector' must be numbers. Encountered invalid type: {type(x).__name__}")
+        vector = np.asarray(vector, dtype='complex128')
         obj._num_qubits = int(math.log2(len(vector)))
         obj._num_classical_states = 2**obj._num_qubits
         obj._state_vector = vector
+        obj._state_vector = obj._state_vector / np.linalg.norm(obj._state_vector)
         obj._bit = None
         obj._init_circuit()
         return obj
@@ -253,13 +262,10 @@ class QuantumState:
             joined._circuit[i].extend(wire)
         return joined
 
-    # TODO: I have witnessed very small values get displayed as empty components. 
-    # E.g. on deutsch algorithm with initial qubits set to 10 instead of 01. 
-    # ???
     def __str__(self):
         amplitudes = []
-        for amp in self._state_vector: # type: ignore - genuinely nothing I can do here. Thinks np.random.random makes a complex number instead of an array
-            amplitudes.append(str(round(amp, 5))[1:-1].replace(' ', '').replace('+', ' + ').replace('-', ' - ').strip())
+        for amp in self._state_vector:
+            amplitudes.append(str(amp).replace('(', '').replace(')', '').replace(' ', '').replace('+', ' + ').replace('-', ' - ').replace('e - ', 'e-').strip())
         longest_amp = 0
         for amp in amplitudes:
             if len(amp) > longest_amp:
@@ -273,7 +279,7 @@ class QuantumState:
         first_non_zero = True
         first_on_line = True
         for i, (amplitude, vector) in enumerate(zip(amplitudes, basis)):
-            if self._state_vector[i] != 0: # type: ignore
+            if self._state_vector[i] != 0:
                 state_string += f"{'=' if first_non_zero else '+'} ({amplitude}) |{vector}> {chr(10) if not first_on_line else ''}"
                 first_non_zero = False
                 first_on_line = not first_on_line

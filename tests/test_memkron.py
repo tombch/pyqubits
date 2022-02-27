@@ -16,6 +16,22 @@ def apply_gate(chosen_matrix, state, qubit):
     return state
 
 
+def apply_2gate(chosen_matrix, state, qubit1, qubit2):
+    if (qubit1 == 1):
+        gate_matrix = chosen_matrix
+    else:
+        gate_matrix = pyqubits.I_matrix
+    for i in range(2, state._num_qubits+1):
+        if (i == qubit1):
+            gate_matrix = np.kron(gate_matrix, chosen_matrix)
+        elif (i == qubit2):
+            continue
+        else:
+            gate_matrix = np.kron(gate_matrix, pyqubits.I_matrix)
+    state._state_vector = gate_matrix @ state._state_vector
+    return state
+
+
 def apply_cgate(chosen_matrix, state, control, target):
     if (control == 1):
         gate_matrix_a = pyqubits.zero_matrix
@@ -65,6 +81,17 @@ def _test_cgate(gate, gate_attr):
                     np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)   
 
 
+def _test_f2(gate, gate_attr, f):
+    for i in range(2, 6):
+        for j in range(1, i):
+            state_1 = pyqubits.QuantumState(n=i)
+            state_2 = pyqubits.QuantumState.from_vector(state_1.vector) # type: ignore
+            np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)
+            state_1 = getattr(state_1, gate_attr)(j, j+1, f=f)
+            state_2 = apply_2gate(gate, state_2, j, j+1)
+            np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=1e-14)   
+
+
 def test_X():
     _test_gate(pyqubits.X_matrix, 'X')
 
@@ -111,3 +138,10 @@ def test_CP():
 
 def test_CT():
     _test_cgate(pyqubits.T_matrix, 'CT')
+
+
+def test_f2():
+    _test_f2(pyqubits.f_bal_0, 'f2', 'bal0')
+    _test_f2(pyqubits.f_bal_1, 'f2', 'bal1')
+    _test_f2(pyqubits.f_const_0, 'f2', 'const0')
+    _test_f2(pyqubits.f_const_1, 'f2', 'const1')
