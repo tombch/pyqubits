@@ -1,15 +1,26 @@
 # `pyqubits`
 
 A Python module for quantum computing simulations.
- 
-### Creating a `QuantumState`
+
+### Setup
+```
+$ git clone https://github.com/tombch/pyqubits.git
+$ cd pyqubits/
+$ conda env create -f environment.yml
+$ conda activate pyqubits
+$ pip install .
+```
+
+### Usage
+
+#### Creating a `QuantumState`
 ```python
 >>> from pyqubits import QuantumState
 >>> s = QuantumState(3)
 >>> t = QuantumState.from_bits('00')
 ```
 
-### Viewing a `QuantumState`
+#### Viewing a `QuantumState`
 ```python
 >>> s
 QuantumState([-0.29615118+0.50152956j,  0.37355584-0.06041027j,
@@ -58,7 +69,7 @@ array([1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j])
 11      0.0     |
 ```
 
-### Manipulating a `QuantumState`
+#### Manipulating a `QuantumState`
 ```python
 >>> t.H(1)
 QuantumState([0.70710678+0.j, 0.        +0.j, 0.70710678+0.j, 0.        +0.j])
