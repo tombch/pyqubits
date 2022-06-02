@@ -23,7 +23,7 @@ def main():
     # old algorithm (repeated application of np.kron)
     start = time.time()
     state = pyqubits.QuantumState.from_bits('0' * num_qubits)
-    state = apply_gate(pyqubits.H_matrix, state, 1)
+    state = apply_gate(pyqubits.H.matrix(), state, 1)
     end = time.time()
     print(end - start)
 

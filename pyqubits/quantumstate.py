@@ -1,158 +1,24 @@
 import math
 import random
-import inspect
 import numpy as np
-import numba as nb
 from numbers import Number
-
-
-zero_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, 0+0j]
-])
-
-
-one_matrix = np.array([
-    [0+0j, 0+0j], 
-    [0+0j, 1+0j]
-])
-
-
-I_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, 1+0j]
-])
-
-
-X_matrix = np.array([
-    [0+0j, 1+0j], 
-    [1+0j, 0+0j]
-])
-
-
-Y_matrix = np.array([
-    [0+0j, 0-1j], 
-    [0+1j, 0+0j]
-])
-
-
-Z_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, -1+0j]
-])
-
-
-H_matrix = np.array([
-    [1+0j, 1+0j], 
-    [1+0j, -1+0j]
-])/np.sqrt(2)
-
-
-P_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, 0+1j]
-])
-
-
-T_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, (np.sqrt(2)/2)+(np.sqrt(2)/2)*1j]
-])
-
-
-f_const_0 = np.array([
-    [1+0j, 0+0j, 0+0j, 0+0j], 
-    [0+0j, 1+0j, 0+0j, 0+0j], 
-    [0+0j, 0+0j, 1+0j, 0+0j], 
-    [0+0j, 0+0j, 0+0j, 1+0j]
-]) 
-
-
-f_const_1 = np.array([
-    [0+0j, 1+0j, 0+0j, 0+0j], 
-    [1+0j, 0+0j, 0+0j, 0+0j], 
-    [0+0j, 0+0j, 0+0j, 1+0j], 
-    [0+0j, 0+0j, 1+0j, 0+0j]
-])         
-
-
-f_bal_0 = np.array([
-    [1+0j, 0+0j, 0+0j, 0+0j], 
-    [0+0j, 1+0j, 0+0j, 0+0j], 
-    [0+0j, 0+0j, 0+0j, 1+0j], 
-    [0+0j, 0+0j, 1+0j, 0+0j]
-])  
-
-
-f_bal_1 = np.array([
-    [0+0j, 1+0j, 0+0j, 0+0j], 
-    [1+0j, 0+0j, 0+0j, 0+0j], 
-    [0+0j, 0+0j, 1+0j, 0+0j], 
-    [0+0j, 0+0j, 0+0j, 1+0j]
-])
-
-
-class QuantumStateError(Exception):
-    pass
-
-
-def validate_qubits(method):
-    '''
-    This decorator checks that the integer arguments of a `QuantumState` method (which are assumed to be qubits) are valid. 
-    '''
-    # Define the decorated function
-    def wrapped_method(obj, *args, **kwargs):
-        arg_names = list(inspect.signature(method).parameters)[1:]
-        arg_types = {x : inspect.signature(method).parameters[x].annotation for x in arg_names}
-        
-        # Validate positional arguments
-        for name, value in zip(arg_names, args):
-            # If the argument type is not an integer, then it is not a qubit argument so can be ignored
-            if arg_types.get(name) == int:
-                if (not isinstance(value, int)) or (not (1 <= value <= obj._num_qubits)):
-                    raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of qubits in the state")
-        
-        # Validate keyword arguments
-        for name, value in kwargs.items():
-            # If the argument type is not an integer, then it is not a qubit argument so can be ignored
-            if arg_types.get(name) == int:
-                if (not isinstance(value, int)) or (not (1 <= value <= obj._num_qubits)):
-                    raise QuantumStateError(f"'{name}' must be a positive integer, less than or equal to the number of qubits in the state")
-        
-        # Return the original method, with its (now validated) original arguments
-        return method(obj, *args, **kwargs)
-    
-    return wrapped_method
-
-
-@nb.njit(fastmath=True, parallel=True)
-def memkron(gates, state, binary_values):
-    '''
-    Apply gate(s) to qubit(s) in the state, without creating an enormous matrix in the process
-    '''
-    new_state = [0+0j for _ in range(len(state))]
-    for i in nb.prange(len(state)):
-        for j in nb.prange(len(state)):
-            val = 1
-            for k in range(len(gates)):
-                val *= gates[k][binary_values[i][k]][binary_values[j][k]]
-            new_state[i] += val * state[j]
-    return new_state
-# Force compile on import
-memkron(np.asarray([I_matrix]), np.asarray([1.+0.j, 0.+0.j]), np.asarray([[0], [1]]))
+from pyqubits.utils import PyQubitsError, validate_qubits, memkron
+from pyqubits.gates import zero_matrix, one_matrix, I_matrix, X, Y, Z, H, P, T, CNOT, CY, CZ, CH, CP, CT, f2
 
 
 class QuantumState:
     '''
-    A class for representing and manipulating multi-qubit states.
+    A class for simulating multi-qubit states.
     '''
     __slots__ = '_num_qubits', '_num_classical_states', '_state_vector', '_bit', '_circuit' 
-    decimal_places = 16 # Rounding accuracy
+    # Rounding accuracy
+    decimal_places = 16
+    # How many characters (length-wise) of the circuit can be printed
     max_visible_circuit = 200
 
     def __init__(self, n : int = 1):
         if (not isinstance(n, int)) or n < 1:
-            raise QuantumStateError("'n' must be a positive integer") 
+            raise PyQubitsError("'n' must be a positive integer") 
         self._num_qubits = n
         self._num_classical_states = 2**self._num_qubits
         # A state vector is created with random values from the unit circle around the origin
@@ -162,18 +28,32 @@ class QuantumState:
         self._bit = None
         self._init_circuit()
 
-    # TODO: '-' feature in bit strings
     @classmethod
     def from_bits(cls, bits : str):
-        if not isinstance(bits, str) or [c for c in bits if c != '0' and c != '1']:
-            raise QuantumStateError(f"'bits' must be a binary number string")
+        if not isinstance(bits, str) or any([not c in '01q' for c in bits]):
+            raise PyQubitsError(f"'bits' must be a binary number string")
         obj = cls()
-        obj._num_qubits = len(bits)
-        obj._num_classical_states = 2**obj._num_qubits
-        obj._state_vector = np.zeros(obj._num_classical_states) + np.zeros(obj._num_classical_states) * 1j # complex128
-        obj._state_vector[int(bits, 2)] = 1
-        obj._bit = None
-        obj._init_circuit()
+        for i, c in enumerate(bits):
+            obj_ = cls()
+            if c == '0':
+                # Create the zero qubit
+                obj_._state_vector = np.zeros(2) + np.zeros(2) * 1j # complex128
+                obj_._state_vector[0] = 1
+            elif c == '1':
+                # Create the one qubit
+                obj_._state_vector = np.zeros(2) + np.zeros(2) * 1j # complex128
+                obj_._state_vector[-1] = 1
+            else:
+                # c == 'q'
+                # Therefore, create a random qubit
+                obj_._state_vector = np.asarray((2 * np.random.random(2) - 1) + ( 2 * np.random.random(2) - 1) * 1j) # complex128
+                obj_._state_vector = obj_._state_vector / np.linalg.norm(obj_._state_vector)
+            if i == 0:
+                # Set the state equal to this qubit, because it is the first one
+                obj = obj_
+            else:
+                # This qubit is not the first, so combine it with the state
+                obj *= obj_
         return obj
 
     @classmethod
@@ -182,19 +62,24 @@ class QuantumState:
         Construct a `QuantumState` object from a vector (this could be a NumPy array or a list).
         The vector is normalised to ensure it is a valid state.
         '''
-        obj = cls()
         if not isinstance(vector, np.ndarray) and not isinstance(vector, list):
-            raise QuantumStateError("'vector' must be either a NumPy array or a list")
+            raise PyQubitsError("'vector' must be either a NumPy array or a list")
         if len(vector) <= 1 or int(math.log2(len(vector))) != math.log2(len(vector)):
-            raise QuantumStateError("The vector's length must be greater than one, and can only be a power of two")
+            # Only when the length of the vector is a power of two will its log2 be an integer
+            # And in this case int(length) will be equal to length
+            raise PyQubitsError("The vector's length must be greater than one, and can only be a power of two")
         for x in vector:
             if not isinstance(x, Number):
-                raise QuantumStateError(f"Elements of 'vector' must be numbers. Encountered invalid type: {type(x).__name__}")
-        vector = np.asarray(vector, dtype='complex128')
-        obj._num_qubits = int(math.log2(len(vector)))
+                raise PyQubitsError(f"Elements of 'vector' must be numbers. Encountered invalid type: {type(x).__name__}")
+        # The state vector is created
+        state_vector = np.asarray(vector, dtype='complex128')
+        # The vector is normalised
+        state_vector = state_vector / np.linalg.norm(state_vector)
+        # The QuantumState is created with the state vector
+        obj = cls()
+        obj._num_qubits = int(math.log2(len(state_vector)))
         obj._num_classical_states = 2**obj._num_qubits
-        obj._state_vector = vector
-        obj._state_vector = obj._state_vector / np.linalg.norm(obj._state_vector)
+        obj._state_vector = state_vector
         obj._bit = None
         obj._init_circuit()
         return obj
@@ -205,24 +90,41 @@ class QuantumState:
         for i in range(0, self._num_qubits):
             qubit_wire = []
             qubit_wire.append(str((i + 1) % 10))
+            # Add the wire to the circuit
             self._circuit.append(qubit_wire)
-            self._circuit.append([' ']) # The empty space between qubit wires
+            # Add the empty space between wires to the circuit
+            self._circuit.append([' '])
         self._advance_circuit()
 
     def _advance_circuit(self):
+        # Adds the space/wires between qubit operations in a circuit
         for i, qubit_wire in enumerate(self._circuit):
             if (i % 2) == 0:
-                # We are on a qubit wire, and not empty space
+                # We are on a qubit wire
                 qubit_wire.extend(['-', '-', '-'])
             else: 
+                # We are on empty space
                 qubit_wire.extend([' ', ' ', ' '])
 
-    def _update_circuit(self, operations):
-        for qubit_wire, operation in zip(self._circuit, operations):
-            if isinstance(operation, list):
-                qubit_wire.extend(operation)
+    def _update_circuit(self, start_qubit, gate_rep):
+        new_circuit = []
+        gate_length = len(gate_rep[0])
+        i = 0
+        while i < self._num_qubits:
+            if (i + 1) == start_qubit:
+                for row in gate_rep:
+                    new_circuit.append(row)
+                new_circuit.append([' '] * gate_length)
+                i += int((len(gate_rep) + 1) / 2)
             else:
-                qubit_wire.append(operation)
+                new_circuit.append(['-'] * gate_length)
+                new_circuit.append([' '] * gate_length)
+                i += 1
+        for current_wire, new_wire in zip(self._circuit, new_circuit):
+            if isinstance(new_wire, list):
+                current_wire.extend(new_wire)
+            else:
+                current_wire.append(new_wire)
         self._advance_circuit()
 
     def __mul__(self, s):
@@ -233,33 +135,47 @@ class QuantumState:
         joined._bit = None
         joined._init_circuit()
         remaining_circuit = []
+        # Difference in number of columns in the circuits
         circuit_length_diff = len(self._circuit[0]) - len(s._circuit[0])
+        # For each row in the self state's circuit
         for i in range(len(self._circuit)):
             if (i % 2) == 0:
                 # We are on a qubit wire, and not empty space
                 wire = list(self._circuit[i])
                 if circuit_length_diff < 0:
+                    # The length of the self state is less than the other state
+                    # So the self state's circuit must be extended by the difference
                     wire.extend(['-'] * abs(circuit_length_diff))
+                # We append the remaining 4 items onward 
+                # This is because init_circuit already has the first 4
                 remaining_circuit.append(wire[4:])
-            else: 
-                wire = list(self._circuit[i])
+            else:
+                # We are on empty space
+                space = list(self._circuit[i])
                 if circuit_length_diff < 0:
-                    wire.extend([' '] * abs(circuit_length_diff))
-                remaining_circuit.append(wire[4:])
+                    space.extend([' '] * abs(circuit_length_diff))
+                remaining_circuit.append(space[4:])
+        # For each row in the other state's circuit
         for i in range(len(s._circuit)):
             if (i % 2) == 0:
                 # We are on a qubit wire, and not empty space
                 wire = list(s._circuit[i])
                 if circuit_length_diff > 0:
+                    # The length of the self state is greater than the other state
+                    # So the other state's circuit must be extended by the difference
                     wire.extend(['-'] * circuit_length_diff)
+                # We append the remaining 4 items onward 
+                # This is because init_circuit already has the first 4
                 remaining_circuit.append(wire[4:])
             else:
-                wire = list(s._circuit[i])
+                # We are on empty space
+                space = list(s._circuit[i])
                 if circuit_length_diff > 0:
-                    wire.extend([' '] * circuit_length_diff)
-                remaining_circuit.append(wire[4:])
-        for i, wire in enumerate(remaining_circuit):
-            joined._circuit[i].extend(wire)
+                    space.extend([' '] * circuit_length_diff)
+                remaining_circuit.append(space[4:])
+        # Add the rest of the circuit to the new joint circuit
+        for i, row in enumerate(remaining_circuit):
+            joined._circuit[i].extend(row)
         return joined
 
     def __str__(self):
@@ -295,7 +211,6 @@ class QuantumState:
         '''
         return self._state_vector
 
-    # TODO (maybe): Some probabilities are displayed as the same due to rounding, but have a different number of '=' chars
     @property
     def dist(self):
         '''
@@ -306,7 +221,8 @@ class QuantumState:
         dist_string = ''
         gen_classical_states = ((i, bin(i)[2:].zfill(self._num_qubits)) for i in range(self._num_classical_states))
         for i, bin_i in gen_classical_states:
-            dist_string += f"{bin_i}\t{round(abs(self._state_vector[i])**2, 2)}\t|{'=' * int(round(50 * abs(self._state_vector[i])**2))}\n" # type: ignore
+            rounded_probability = round(abs(self._state_vector[i])**2, 2)
+            dist_string += f"{bin_i}\t{rounded_probability}\t|{'=' * int(100 * rounded_probability)}\n" # type: ignore
         return dist_string[:-1]
         
     @property
@@ -344,19 +260,8 @@ class QuantumState:
         The outcome of the latest measurement of the quantum state.
         '''
         return self._bit
-
-    def _apply_gate(self, gate, qubit):
-        gates = []
-        for i in range(1, self._num_qubits+1):
-            if i == qubit:
-                gates.append(gate)
-            else:
-                gates.append(I_matrix)
-        gates = np.asarray(gates)
-        binary_values = np.asarray([[int(x) for x in bin(i)[2:].zfill(self._num_qubits)] for i in range(self._num_classical_states)])
-        self._state_vector = np.asarray(memkron(gates, self._state_vector, binary_values))
     
-    def _apply_multigate(self, *args, gate):
+    def _apply_gate(self, *args, gate):
         gates = []
         gate_sizes = []
         gate_at_pos = []
@@ -381,14 +286,14 @@ class QuantumState:
             current_bin = bin(i)[2:].zfill(self._num_qubits)
             while position < self._num_qubits:
                 num_qubits_for_gate = int(math.log2(gate_sizes[gate_at_pos[position]]))
-                bin_list.append(int(current_bin[position:position+num_qubits_for_gate], base=2))
+                bin_list.append(int(current_bin[position : position + num_qubits_for_gate], base=2))
                 position += num_qubits_for_gate
             binary_values.append(bin_list)
         gates = np.asarray(gates)
         binary_values = np.asarray(binary_values)
         self._state_vector = np.asarray(memkron(gates, self._state_vector, binary_values))
 
-    def _apply_cgate(self, gate, control, target):
+    def _apply_cgate(self, control, target, gate):
         gates_a = []
         gates_b = []
         for i in range(1, self._num_qubits+1):
@@ -443,62 +348,13 @@ class QuantumState:
         self._state_vector = self._state_vector/np.linalg.norm(self._state_vector)
         self._bit = bit
 
-    def _register_gate(self, gate_char, qubit):
-        operations = []
-        for i in range(0, self._num_qubits):
-            if (i+1) == qubit: 
-                operations.append(gate_char)
-            else:
-                operations.append('-')
-            operations.append(' ') # Empty space between qubit wires
-        self._update_circuit(operations)
-
-    def _register_multigate(self, gate_name, qubit1, qubit2):
-        operations = []
-        inbetween_gate = False
-        for i in range(0, self._num_qubits):
-            if (i+1) == qubit1: 
-                inbetween_gate = not inbetween_gate
-                operations.append(['|'] + ['-'] * len(gate_name) + ['|']) 
-            elif (i+1) == qubit2:
-                inbetween_gate = not inbetween_gate
-                operations.append(['|'] + ['-'] * len(gate_name) + ['|']) 
-            else:
-                operations.append(['-'] * (len(gate_name) + 2))    
-            if inbetween_gate:
-                operations.append(['|'] +  [x for x in gate_name] + ['|'])
-            else:
-                operations.append([' '] * (len(gate_name) + 2)) # Empty space between qubit wires
-        self._update_circuit(operations)
-
-    def _register_cgate(self, gate_char, control, target):
-        operations = []
-        inbetween_control_target = False
-        for i in range(0, self._num_qubits):
-            if (i+1) == control:
-                operations.append('O')
-                inbetween_control_target = not inbetween_control_target
-            elif (i+1) == target:
-                operations.append(gate_char)
-                inbetween_control_target = not inbetween_control_target
-            else:
-                if inbetween_control_target:
-                    operations.append('|')
-                else:
-                    operations.append('-')
-            if inbetween_control_target:
-                operations.append('|') # We have a vertical wire connecting the control and target
-            else:
-                operations.append(' ') # Empty space between qubit wires
-        self._update_circuit(operations)
-
     @validate_qubits
     def measure(self, qubit : int):
         '''
         Measure a `qubit` within the quantum state.
         '''
         self._apply_measure(qubit)
-        self._register_gate(str(self._bit), qubit)
+        self._update_circuit(qubit, [[str(self._bit)]])
         return self
 
     @validate_qubits
@@ -506,8 +362,8 @@ class QuantumState:
         '''
         Apply the X gate to a `qubit` within the quantum state.
         '''
-        self._apply_gate(X_matrix, qubit)
-        self._register_gate('X', qubit)
+        self._apply_gate(qubit, gate=X.matrix())
+        self._update_circuit(qubit, X.gate())
         return self
 
     @validate_qubits
@@ -515,8 +371,8 @@ class QuantumState:
         '''
         Apply the Y gate to a `qubit` within the quantum state.
         '''
-        self._apply_gate(Y_matrix, qubit)
-        self._register_gate('Y', qubit)
+        self._apply_gate(qubit, gate=Y.matrix())
+        self._update_circuit(qubit, Y.gate())
         return self
 
     @validate_qubits
@@ -524,8 +380,8 @@ class QuantumState:
         '''
         Apply the Z gate to a `qubit` within the quantum state.
         '''
-        self._apply_gate(Z_matrix, qubit)
-        self._register_gate('Z', qubit)
+        self._apply_gate(qubit, gate=Z.matrix())
+        self._update_circuit(qubit, Z.gate())
         return self
 
     @validate_qubits
@@ -533,8 +389,8 @@ class QuantumState:
         '''
         Apply the H gate to a `qubit` within the quantum state.
         '''
-        self._apply_gate(H_matrix, qubit)
-        self._register_gate('H', qubit)
+        self._apply_gate(qubit, gate=H.matrix())
+        self._update_circuit(qubit, H.gate())
         return self
 
     @validate_qubits
@@ -542,8 +398,8 @@ class QuantumState:
         '''
         Apply the P gate to a `qubit` within the quantum state.
         '''
-        self._apply_gate(P_matrix, qubit)
-        self._register_gate('P', qubit)
+        self._apply_gate(qubit, gate=P.matrix())
+        self._update_circuit(qubit, P.gate())
         return self
 
     @validate_qubits
@@ -551,8 +407,8 @@ class QuantumState:
         '''
         Apply the T gate to a `qubit` within the quantum state.
         '''
-        self._apply_gate(T_matrix, qubit)
-        self._register_gate('T', qubit)
+        self._apply_gate(qubit, gate=T.matrix())
+        self._update_circuit(qubit, T.gate())
         return self
 
     @validate_qubits
@@ -560,8 +416,11 @@ class QuantumState:
         '''
         Apply the CNOT (controlled-X) gate to a `control` qubit and `target` qubit within the quantum state.
         '''
-        self._apply_cgate(X_matrix, control, target)
-        self._register_cgate('X', control, target)
+        if control == target:
+            raise PyQubitsError("'control' and 'target' cannot be the same")
+
+        self._apply_cgate(control, target, CNOT.matrix())
+        self._update_circuit(min(control, target), CNOT.gate(control, target))
         return self
 
     @validate_qubits
@@ -569,8 +428,11 @@ class QuantumState:
         '''
         Apply the CY (controlled-Y) gate to a `control` qubit and `target` qubit within the quantum state.
         '''
-        self._apply_cgate(Y_matrix, control, target)
-        self._register_cgate('Y', control, target)
+        if control == target:
+            raise PyQubitsError("'control' and 'target' cannot be the same")
+
+        self._apply_cgate(control, target, CY.matrix())
+        self._update_circuit(min(control, target), CY.gate(control, target))
         return self
 
     @validate_qubits
@@ -578,8 +440,11 @@ class QuantumState:
         '''
         Apply the CZ (controlled-Z) gate to a `control` qubit and `target` qubit within the quantum state.
         '''
-        self._apply_cgate(Z_matrix, control, target)
-        self._register_cgate('Z', control, target)
+        if control == target:
+            raise PyQubitsError("'control' and 'target' cannot be the same")
+
+        self._apply_cgate(control, target, CZ.matrix())
+        self._update_circuit(min(control, target), CZ.gate(control, target))
         return self
 
     @validate_qubits
@@ -587,8 +452,11 @@ class QuantumState:
         '''
         Apply the CH (controlled-H) gate to a `control` qubit and `target` qubit within the quantum state.
         '''
-        self._apply_cgate(H_matrix, control, target)
-        self._register_cgate('H', control, target)
+        if control == target:
+            raise PyQubitsError("'control' and 'target' cannot be the same")
+
+        self._apply_cgate(control, target, CH.matrix())
+        self._update_circuit(min(control, target), CH.gate(control, target))
         return self
 
     @validate_qubits
@@ -596,8 +464,11 @@ class QuantumState:
         '''
         Apply the CP (controlled-P) gate to a `control` qubit and `target` qubit within the quantum state.
         '''
-        self._apply_cgate(P_matrix, control, target)
-        self._register_cgate('P', control, target)
+        if control == target:
+            raise PyQubitsError("'control' and 'target' cannot be the same")
+
+        self._apply_cgate(control, target, CP.matrix())
+        self._update_circuit(min(control, target), CP.gate(control, target))
         return self
 
     @validate_qubits
@@ -605,8 +476,22 @@ class QuantumState:
         '''
         Apply the CT (controlled-T) gate to a `control` qubit and `target` qubit within the quantum state.
         '''
-        self._apply_cgate(T_matrix, control, target)
-        self._register_cgate('T', control, target)
+        if control == target:
+            raise PyQubitsError("'control' and 'target' cannot be the same")
+
+        self._apply_cgate(control, target, CT.matrix())
+        self._update_circuit(min(control, target), CT.gate(control, target))
+        return self
+
+    @validate_qubits
+    def f2(self, qubit1 : int, qubit2 : int, f : str):
+        if qubit1 + 1 != qubit2:
+            raise PyQubitsError("'qubit1' must be one less than 'qubit2'")
+        if not f in ['const0', 'const1', 'bal0', 'bal1']:
+            raise PyQubitsError(f"invalid choice of 'f'")
+        
+        self._apply_gate(qubit1, qubit2, gate=f2.matrix(f))
+        self._update_circuit(qubit1, f2.gate())
         return self
 
     @validate_qubits
@@ -617,26 +502,9 @@ class QuantumState:
         The SWAP gate is (currently) implemented through CNOT gates.
         '''
         if qubit1 == qubit2:
-            raise QuantumStateError("'qubit1' and 'qubit2' cannot be the same")
+            raise PyQubitsError("'qubit1' and 'qubit2' cannot be the same")
+
         self.CNOT(qubit1, qubit2)
         self.CNOT(qubit2, qubit1)
         self.CNOT(qubit1, qubit2)
-        return self
-
-    @validate_qubits
-    def f2(self, qubit1 : int, qubit2 : int, f : str):
-        if qubit1 + 1 != qubit2:
-            raise QuantumStateError("'qubit1' must be one less than 'qubit2'")  
-        if f == 'const0':
-            f_matrix = f_const_0
-        elif f == 'const1':
-            f_matrix = f_const_1  
-        elif f == 'bal0':
-            f_matrix = f_bal_0
-        elif f == 'bal1':
-            f_matrix = f_bal_1
-        else:
-            raise QuantumStateError(f"invalid choice of 'f'")
-        self._apply_multigate(qubit1, qubit2, gate=f_matrix)
-        self._register_multigate('f2', qubit1, qubit2)
         return self
