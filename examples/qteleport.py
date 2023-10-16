@@ -2,7 +2,7 @@ from pyqubits import QuantumState
 
 
 def quantum_teleportation():
-    s = QuantumState.from_bits('q00')
+    s = QuantumState.from_bits("q00")
     print(s)
     s.H(2)
     s.CNOT(2, 3)
@@ -18,6 +18,6 @@ def quantum_teleportation():
     print(s.circuit)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("===QUANTUM TELEPORTATION===")
     quantum_teleportation()
