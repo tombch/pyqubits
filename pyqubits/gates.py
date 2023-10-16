@@ -3,100 +3,75 @@ import numpy as np
 import pyqubits.utils as utils
 
 
-zero_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, 0+0j]
-])
+zero_matrix = np.array([[1 + 0j, 0 + 0j], [0 + 0j, 0 + 0j]])
 
 
-one_matrix = np.array([
-    [0+0j, 0+0j], 
-    [0+0j, 1+0j]
-])
+one_matrix = np.array([[0 + 0j, 0 + 0j], [0 + 0j, 1 + 0j]])
 
 
-I_matrix = np.array([
-    [1+0j, 0+0j], 
-    [0+0j, 1+0j]
-])
+I_matrix = np.array([[1 + 0j, 0 + 0j], [0 + 0j, 1 + 0j]])
 
 
 class X:
     @classmethod
     def matrix(cls):
-        return np.array([
-            [0+0j, 1+0j], 
-            [1+0j, 0+0j]
-        ])
+        return np.array([[0 + 0j, 1 + 0j], [1 + 0j, 0 + 0j]])
 
     @classmethod
     def gate(cls):
-        return [['X']]
+        return [["X"]]
 
 
 class Y:
     @classmethod
     def matrix(cls):
-        return np.array([
-            [0+0j, 0-1j], 
-            [0+1j, 0+0j]
-        ])
+        return np.array([[0 + 0j, 0 - 1j], [0 + 1j, 0 + 0j]])
 
     @classmethod
     def gate(cls):
-        return [['Y']]
+        return [["Y"]]
 
 
 class Z:
     @classmethod
     def matrix(cls):
-        return np.array([
-            [1+0j, 0+0j], 
-            [0+0j, -1+0j]
-        ])
+        return np.array([[1 + 0j, 0 + 0j], [0 + 0j, -1 + 0j]])
 
     @classmethod
     def gate(cls):
-        return [['Z']]
+        return [["Z"]]
 
 
 class H:
     @classmethod
     def matrix(cls):
-        return np.array([
-            [1+0j, 1+0j], 
-            [1+0j, -1+0j]
-        ])/np.sqrt(2)
+        return np.array([[1 + 0j, 1 + 0j], [1 + 0j, -1 + 0j]]) / np.sqrt(2)
 
     @classmethod
     def gate(cls):
-        return [['H']]
+        return [["H"]]
 
 
 class P:
     @classmethod
     def matrix(cls):
-        return np.array([
-            [1+0j, 0+0j], 
-            [0+0j, 0+1j]
-        ])
+        return np.array([[1 + 0j, 0 + 0j], [0 + 0j, 0 + 1j]])
 
     @classmethod
     def gate(cls):
-        return [['P']]
+        return [["P"]]
 
 
 class T:
     @classmethod
     def matrix(cls):
-        return np.array([
-            [1+0j, 0+0j], 
-            [0+0j, (np.sqrt(2)/2)+(np.sqrt(2)/2)*1j]
-        ])
+        return np.array(
+            [[1 + 0j, 0 + 0j], [0 + 0j, (np.sqrt(2) / 2) + (np.sqrt(2) / 2) * 1j]]
+        )
 
     @classmethod
     def gate(cls):
-        return [['T']]
+        return [["T"]]
 
 
 class CNOT:
@@ -105,7 +80,7 @@ class CNOT:
         return X.matrix()
 
     @classmethod
-    def gate(cls, control, target): 
+    def gate(cls, control, target):
         return utils._cgate(control, target, X.gate()[0][0])
 
 
@@ -115,7 +90,7 @@ class CY:
         return Y.matrix()
 
     @classmethod
-    def gate(cls, control, target): 
+    def gate(cls, control, target):
         return utils._cgate(control, target, Y.gate()[0][0])
 
 
@@ -125,7 +100,7 @@ class CZ:
         return Z.matrix()
 
     @classmethod
-    def gate(cls, control, target): 
+    def gate(cls, control, target):
         return utils._cgate(control, target, Z.gate()[0][0])
 
 
@@ -135,7 +110,7 @@ class CH:
         return H.matrix()
 
     @classmethod
-    def gate(cls, control, target): 
+    def gate(cls, control, target):
         return utils._cgate(control, target, H.gate()[0][0])
 
 
@@ -145,7 +120,7 @@ class CP:
         return P.matrix()
 
     @classmethod
-    def gate(cls, control, target): 
+    def gate(cls, control, target):
         return utils._cgate(control, target, P.gate()[0][0])
 
 
@@ -155,7 +130,7 @@ class CT:
         return T.matrix()
 
     @classmethod
-    def gate(cls, control, target): 
+    def gate(cls, control, target):
         return utils._cgate(control, target, T.gate()[0][0])
 
 
@@ -163,40 +138,44 @@ class f2:
     @classmethod
     def matrix(cls, f=None):
         if f is None:
-            f = random.choice(['const0', 'const1', 'bal0', 'bal1'])
-        if f == 'const0':
-            return np.array([
-                [1+0j, 0+0j, 0+0j, 0+0j], 
-                [0+0j, 1+0j, 0+0j, 0+0j], 
-                [0+0j, 0+0j, 1+0j, 0+0j], 
-                [0+0j, 0+0j, 0+0j, 1+0j]
-            ]) 
-        elif f == 'const1':
-            return np.array([
-                [0+0j, 1+0j, 0+0j, 0+0j], 
-                [1+0j, 0+0j, 0+0j, 0+0j], 
-                [0+0j, 0+0j, 0+0j, 1+0j], 
-                [0+0j, 0+0j, 1+0j, 0+0j]
-            ])           
-        elif f == 'bal0':
-            return np.array([
-                [1+0j, 0+0j, 0+0j, 0+0j], 
-                [0+0j, 1+0j, 0+0j, 0+0j], 
-                [0+0j, 0+0j, 0+0j, 1+0j], 
-                [0+0j, 0+0j, 1+0j, 0+0j]
-            ])  
-        elif f == 'bal1':
-            return np.array([
-                [0+0j, 1+0j, 0+0j, 0+0j], 
-                [1+0j, 0+0j, 0+0j, 0+0j], 
-                [0+0j, 0+0j, 1+0j, 0+0j], 
-                [0+0j, 0+0j, 0+0j, 1+0j]
-            ])
-    
+            f = random.choice(["const0", "const1", "bal0", "bal1"])
+        if f == "const0":
+            return np.array(
+                [
+                    [1 + 0j, 0 + 0j, 0 + 0j, 0 + 0j],
+                    [0 + 0j, 1 + 0j, 0 + 0j, 0 + 0j],
+                    [0 + 0j, 0 + 0j, 1 + 0j, 0 + 0j],
+                    [0 + 0j, 0 + 0j, 0 + 0j, 1 + 0j],
+                ]
+            )
+        elif f == "const1":
+            return np.array(
+                [
+                    [0 + 0j, 1 + 0j, 0 + 0j, 0 + 0j],
+                    [1 + 0j, 0 + 0j, 0 + 0j, 0 + 0j],
+                    [0 + 0j, 0 + 0j, 0 + 0j, 1 + 0j],
+                    [0 + 0j, 0 + 0j, 1 + 0j, 0 + 0j],
+                ]
+            )
+        elif f == "bal0":
+            return np.array(
+                [
+                    [1 + 0j, 0 + 0j, 0 + 0j, 0 + 0j],
+                    [0 + 0j, 1 + 0j, 0 + 0j, 0 + 0j],
+                    [0 + 0j, 0 + 0j, 0 + 0j, 1 + 0j],
+                    [0 + 0j, 0 + 0j, 1 + 0j, 0 + 0j],
+                ]
+            )
+        elif f == "bal1":
+            return np.array(
+                [
+                    [0 + 0j, 1 + 0j, 0 + 0j, 0 + 0j],
+                    [1 + 0j, 0 + 0j, 0 + 0j, 0 + 0j],
+                    [0 + 0j, 0 + 0j, 1 + 0j, 0 + 0j],
+                    [0 + 0j, 0 + 0j, 0 + 0j, 1 + 0j],
+                ]
+            )
+
     @classmethod
     def gate(cls):
-        return [
-            ['|', '-', '-', '|'],
-            ['|', 'f', '2', '|'],
-            ['|', '-', '-', '|']
-        ]
+        return [["|", "-", "-", "|"], ["|", "f", "2", "|"], ["|", "-", "-", "|"]]

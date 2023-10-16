@@ -1,8 +1,0 @@
-name: pyqubits
-channels:
-  - defaults
-dependencies:
-  - pip
-  - pip:
-    - numpy
-    - numba
