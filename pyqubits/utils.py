@@ -1,7 +1,7 @@
 import inspect
 import numpy as np
 import numba as nb
-import pyqubits.gates as gates
+from . import gates
 
 
 class PyQubitsError(Exception):
@@ -87,3 +87,96 @@ def _cgate(control, target, gate_char):
     else:
         raise PyQubitsError("'control' and 'target' cannot be the same")
     return gate
+
+
+def print_state(z):
+    """
+    Print the state of a `QuantumState` object.
+    """
+
+    amplitudes = []
+    for amp in z.vector:
+        amplitudes.append(
+            str(amp)
+            .replace("(", "")
+            .replace(")", "")
+            .replace(" ", "")
+            .replace("+", " + ")
+            .replace("-", " - ")
+            .replace("e - ", "e-")
+            .strip()
+        )
+    longest_amp = 0
+    for amp in amplitudes:
+        if len(amp) > longest_amp:
+            longest_amp = len(amp)
+    for i, amp in enumerate(amplitudes):
+        diff = longest_amp - len(amp)
+        if diff != 0:
+            amplitudes[i] = (" " * diff) + amplitudes[i]
+    basis = [bin(i)[2:].zfill(z._num_qubits) for i in range(z._num_classical_states)]
+    state_string = ""
+    first_non_zero = True
+    first_on_line = True
+    for i, (amplitude, vector) in enumerate(zip(amplitudes, basis)):
+        if z.vector[i] != 0:
+            state_string += f"{'=' if first_non_zero else '+'} ({amplitude}) |{vector}> {chr(10) if not first_on_line else ''}"
+            first_non_zero = False
+            first_on_line = not first_on_line
+
+    print(state_string[:-1] if state_string[-1] == "\n" else state_string)
+
+
+def print_dist(z):
+    """
+    Print the discrete probability distribution of a `QuantumState` object.
+
+    The distribution shows the probability of each outcome if every qubit in the quantum state is measured.
+    """
+
+    dist_string = ""
+    gen_classical_states = (
+        (i, bin(i)[2:].zfill(z._num_qubits)) for i in range(z._num_classical_states)
+    )
+    for i, bin_i in gen_classical_states:
+        rounded_probability = round(abs(z.vector[i]) ** 2, 2)
+        dist_string += f"{bin_i}\t{rounded_probability}\t|{'=' * int(100 * rounded_probability)}\n"  # type: ignore
+
+    print(dist_string[:-1])
+
+
+def print_circuit(z, full=False):
+    """
+    Print the quantum circuit diagram of a `QuantumState` object.
+
+    The quantum circuit shows all actions that have been carried out on the quantum state.
+    """
+
+    circuit_string = ""
+
+    if full:
+        for i in range(
+            len(z._circuit) - 1
+        ):  # We don't want to print the last line of empty space
+            circuit_string += "".join(z._circuit[i]) + "\n"
+    else:
+        if len(z._circuit[0]) - 4 > z.max_visible_circuit:
+            for i in range(
+                len(z._circuit) - 1
+            ):  # We don't want to print the last line of empty space
+                circuit_string += z._circuit[i][0] + "..."
+                circuit_string += (
+                    "".join(
+                        z._circuit[i][
+                            4 + (len(z._circuit[0]) - z.max_visible_circuit - 4) :
+                        ]
+                    )
+                    + "\n"
+                )
+        else:
+            for i in range(
+                len(z._circuit) - 1
+            ):  # We don't want to print the last line of empty space
+                circuit_string += "".join(z._circuit[i]) + "\n"
+
+    print(circuit_string[:-1])

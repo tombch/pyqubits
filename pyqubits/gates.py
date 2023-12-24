@@ -1,6 +1,6 @@
 import random
 import numpy as np
-import pyqubits.utils as utils
+from . import utils
 
 
 zero_matrix = np.array([[1 + 0j, 0 + 0j], [0 + 0j, 0 + 0j]])

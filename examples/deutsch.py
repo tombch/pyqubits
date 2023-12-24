@@ -1,4 +1,4 @@
-from pyqubits import QuantumState
+from pyqubits import QuantumState, print_circuit
 
 
 def deutsch_algorithm():
@@ -9,7 +9,7 @@ def deutsch_algorithm():
         s.f2(1, 2, f=x)
         s.H(1)
         f0_xor_f1 = s.measure(1).bit
-        print(s.circuit)
+        print_circuit(s)
         if f0_xor_f1 == 0:
             print(f"{x} is constant")
         elif f0_xor_f1 == 1:

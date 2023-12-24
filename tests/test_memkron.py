@@ -16,7 +16,7 @@ def apply_gate(chosen_matrix, state, qubit):
             gate_matrix = np.kron(gate_matrix, chosen_matrix)
         else:
             gate_matrix = np.kron(gate_matrix, pyqubits.I_matrix)
-    state._state_vector = gate_matrix @ state._state_vector
+    state.vector = gate_matrix @ state.vector
     return state
 
 
@@ -32,7 +32,7 @@ def apply_2gate(chosen_matrix, state, qubit1, qubit2):
             continue
         else:
             gate_matrix = np.kron(gate_matrix, pyqubits.I_matrix)
-    state._state_vector = gate_matrix @ state._state_vector
+    state.vector = gate_matrix @ state.vector
     return state
 
 
@@ -57,7 +57,7 @@ def apply_cgate(chosen_matrix, state, control, target):
             gate_matrix_a = np.kron(gate_matrix_a, pyqubits.I_matrix)
             gate_matrix_b = np.kron(gate_matrix_b, pyqubits.I_matrix)
     gate_matrix = np.add(gate_matrix_a, gate_matrix_b)
-    state._state_vector = gate_matrix @ state._state_vector
+    state.vector = gate_matrix @ state.vector
     return state
 
 

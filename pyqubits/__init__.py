@@ -1,5 +1,5 @@
-from pyqubits.quantumstate import QuantumState
-from pyqubits.gates import (
+from .quantumstate import QuantumState
+from .gates import (
     zero_matrix,
     one_matrix,
     I_matrix,
@@ -17,3 +17,4 @@ from pyqubits.gates import (
     CT,
     f2,
 )
+from .utils import print_state, print_dist, print_circuit
