@@ -1,70 +1,16 @@
-import pyqubits
 import numpy as np
+import pyqubits
+from tests.utils import apply_gate, apply_cgate, apply_2gate
 
 
 # Max difference between floats
 TOLERANCE = 1e-12
 
 
-def apply_gate(chosen_matrix, state, qubit):
-    if qubit == 1:
-        gate_matrix = chosen_matrix
-    else:
-        gate_matrix = pyqubits.I_matrix
-    for i in range(2, state._num_qubits + 1):
-        if i == qubit:
-            gate_matrix = np.kron(gate_matrix, chosen_matrix)
-        else:
-            gate_matrix = np.kron(gate_matrix, pyqubits.I_matrix)
-    state.vector = gate_matrix @ state.vector
-    return state
-
-
-def apply_2gate(chosen_matrix, state, qubit1, qubit2):
-    if qubit1 == 1:
-        gate_matrix = chosen_matrix
-    else:
-        gate_matrix = pyqubits.I_matrix
-    for i in range(2, state._num_qubits + 1):
-        if i == qubit1:
-            gate_matrix = np.kron(gate_matrix, chosen_matrix)
-        elif i == qubit2:
-            continue
-        else:
-            gate_matrix = np.kron(gate_matrix, pyqubits.I_matrix)
-    state.vector = gate_matrix @ state.vector
-    return state
-
-
-def apply_cgate(chosen_matrix, state, control, target):
-    if control == 1:
-        gate_matrix_a = pyqubits.zero_matrix
-        gate_matrix_b = pyqubits.one_matrix
-    elif target == 1:
-        gate_matrix_a = pyqubits.I_matrix
-        gate_matrix_b = chosen_matrix
-    else:
-        gate_matrix_a = pyqubits.I_matrix
-        gate_matrix_b = pyqubits.I_matrix
-    for i in range(2, state._num_qubits + 1):
-        if i == control:
-            gate_matrix_a = np.kron(gate_matrix_a, pyqubits.zero_matrix)
-            gate_matrix_b = np.kron(gate_matrix_b, pyqubits.one_matrix)
-        elif i == target:
-            gate_matrix_a = np.kron(gate_matrix_a, pyqubits.I_matrix)
-            gate_matrix_b = np.kron(gate_matrix_b, chosen_matrix)
-        else:
-            gate_matrix_a = np.kron(gate_matrix_a, pyqubits.I_matrix)
-            gate_matrix_b = np.kron(gate_matrix_b, pyqubits.I_matrix)
-    gate_matrix = np.add(gate_matrix_a, gate_matrix_b)
-    state.vector = gate_matrix @ state.vector
-    return state
-
-
 def _test_gate(gate, gate_attr):
     for i in range(1, 6):
         for j in range(1, i + 1):
-            state_1 = pyqubits.QuantumState(n=i)
+            state_1 = pyqubits.QuantumState(n_qubits=i)
             state_2 = pyqubits.QuantumState.from_vector(state_1.vector)  # type: ignore
             np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=TOLERANCE)
             state_1 = getattr(state_1, gate_attr)(j)
@@ -77,7 +23,7 @@ def _test_cgate(gate, gate_attr):
         for j in range(1, i + 1):
             for k in range(1, i + 1):
                 if j != k:
-                    state_1 = pyqubits.QuantumState(n=i)
+                    state_1 = pyqubits.QuantumState(n_qubits=i)
                     state_2 = pyqubits.QuantumState.from_vector(state_1.vector)  # type: ignore
                     np.testing.assert_allclose(
                         state_1.vector, state_2.vector, rtol=TOLERANCE
@@ -92,7 +38,7 @@ def _test_cgate(gate, gate_attr):
 def _test_f2(gate, gate_attr, f):
     for i in range(2, 6):
         for j in range(1, i):
-            state_1 = pyqubits.QuantumState(n=i)
+            state_1 = pyqubits.QuantumState(n_qubits=i)
             state_2 = pyqubits.QuantumState.from_vector(state_1.vector)  # type: ignore
             np.testing.assert_allclose(state_1.vector, state_2.vector, rtol=TOLERANCE)
             state_1 = getattr(state_1, gate_attr)(j, j + 1, f=f)
