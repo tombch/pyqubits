@@ -1,4 +1,4 @@
-from .quantumstate import QuantumState
+from .quantumstate import QuantumState, print_state, print_dist, print_circuit
 from .gates import (
     zero_matrix,
     one_matrix,
@@ -17,4 +17,3 @@ from .gates import (
     CT,
     f2,
 )
-from .utils import print_state, print_dist, print_circuit

@@ -1,6 +1,39 @@
 import random
+from typing import List
 import numpy as np
-from . import utils
+
+
+def _cgate(control: int, target: int, gate_char: str) -> List:
+    """
+    Helper function for gate classes.
+    Creates a cgate representation that will be added to a state's circuit.
+
+    Args:
+        control (int): Control qubit.
+        target (int): Target qubit.
+        gate_char (str): Gate character.
+
+    Returns:
+        The cgate representation.
+    """
+    gate = []
+    if control < target:
+        gate.append(["O"])
+        gate.append(["│"])
+        for _ in range(abs(target - control) - 1):
+            gate.append(["│"])
+            gate.append(["│"])
+        gate.append([gate_char])
+    elif control > target:
+        gate.append([gate_char])
+        gate.append(["│"])
+        for _ in range(abs(target - control) - 1):
+            gate.append(["│"])
+            gate.append(["│"])
+        gate.append(["O"])
+    else:
+        raise ValueError("'control' and 'target' cannot be the same")
+    return gate
 
 
 zero_matrix = np.array([[1 + 0j, 0 + 0j], [0 + 0j, 0 + 0j]])
@@ -81,7 +114,7 @@ class CNOT:
 
     @classmethod
     def gate(cls, control, target):
-        return utils._cgate(control, target, X.gate()[0][0])
+        return _cgate(control, target, X.gate()[0][0])
 
 
 class CY:
@@ -91,7 +124,7 @@ class CY:
 
     @classmethod
     def gate(cls, control, target):
-        return utils._cgate(control, target, Y.gate()[0][0])
+        return _cgate(control, target, Y.gate()[0][0])
 
 
 class CZ:
@@ -101,7 +134,7 @@ class CZ:
 
     @classmethod
     def gate(cls, control, target):
-        return utils._cgate(control, target, Z.gate()[0][0])
+        return _cgate(control, target, Z.gate()[0][0])
 
 
 class CH:
@@ -111,7 +144,7 @@ class CH:
 
     @classmethod
     def gate(cls, control, target):
-        return utils._cgate(control, target, H.gate()[0][0])
+        return _cgate(control, target, H.gate()[0][0])
 
 
 class CP:
@@ -121,7 +154,7 @@ class CP:
 
     @classmethod
     def gate(cls, control, target):
-        return utils._cgate(control, target, P.gate()[0][0])
+        return _cgate(control, target, P.gate()[0][0])
 
 
 class CT:
@@ -131,7 +164,7 @@ class CT:
 
     @classmethod
     def gate(cls, control, target):
-        return utils._cgate(control, target, T.gate()[0][0])
+        return _cgate(control, target, T.gate()[0][0])
 
 
 class f2:
@@ -178,4 +211,8 @@ class f2:
 
     @classmethod
     def gate(cls):
-        return [["|", "-", "-", "|"], ["|", "f", "2", "|"], ["|", "-", "-", "|"]]
+        return [
+            ["┬", "─", "─", "┬"],
+            ["│", "f", "2", "│"],
+            ["┴", "─", "─", "┴"],
+        ]
